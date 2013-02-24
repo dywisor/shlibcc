@@ -1,0 +1,23 @@
+!.gitignore
+
+# python bytecode files
+*.py[cdo]
+
+# auto backup files
+*~
+~*
+*.sw[a-z]
+*.bak*
+
+# setup.py related files
+/MANIFEST
+/release
+/build
+/dist
+
+# generated documentation files
+/doc/pydoc
+
+# local files
+/local
+*.local
