@@ -10,10 +10,14 @@ import os
 
 class MaxRecursionDepthReached ( Exception ):
 
-   def __init__ ( self, N ):
+   def __init__ ( self, N, backtrace, name ):
       super ( MaxRecursionDepthReached, self ).__init__ (
-         'max depth {!r} reached while searching for modules - '
-         'consider increasing --max-depth'.format ( N )
+         'max depth {depth!r} reached while searching for modules '
+         '({modules!r} -> {mod}) - consider increasing --max-depth'.format (
+            depth   = N,
+            modules = backtrace,
+            mod     = name,
+         )
       )
    # --- end of __init__ (...) ---
 
@@ -151,17 +155,19 @@ def make_dependency_table ( root, modules, config ):
 
    file_lookup = file_lookup_bash if config.use_bash else file_lookup_sh
 
-   def deptable_populate ( name, rec_depth ):
+   def deptable_populate ( name, backtrace ):
       """Populates the dependency table.
 
       Adds the given module and all of its dependencies to the table.
       """
       def deptable_populate_from_file (
-         fspath_noext, fspath, module_name, rec_depth
+         fspath_noext, fspath, module_name, backtrace
       ):
          """Adds a module file to the table."""
-         if rec_depth >= MAX_REC_DEPTH:
-            raise MaxRecursionDepthReached ( MAX_REC_DEPTH )
+         if len ( backtrace ) >= MAX_REC_DEPTH:
+            raise MaxRecursionDepthReached (
+               MAX_REC_DEPTH, backtrace, module_name
+            )
 
          elif D.add_new ( module_name, fspath ):
             node    = D.last
@@ -175,15 +181,20 @@ def make_dependency_table ( root, modules, config ):
                for dep in deps:
                   if dep and dep [0] != '#':
                      node.register_direct_dep ( dep )
-                     deptable_populate ( dep, rec_depth + 1 )
+                     deptable_populate (
+                        name      = dep,
+                        backtrace = backtrace,
+                     )
       # --- end of deptable_populate_from_file (...) ---
 
-      def deptable_populate_from_directory ( directory, dir_name, rec_depth ):
+      def deptable_populate_from_directory ( directory, dir_name, backtrace ):
          """Adds a directory to the table."""
 
          # recursively expand directory
-         if rec_depth >= MAX_REC_DEPTH:
-            raise MaxRecursionDepthReached ( MAX_REC_DEPTH )
+         if len ( backtrace ) >= MAX_REC_DEPTH:
+            raise MaxRecursionDepthReached (
+               MAX_REC_DEPTH, backtrace, dir_name
+            )
 
          elif D.add_new ( dir_name, directory ):
             node = D.last
@@ -199,9 +210,9 @@ def make_dependency_table ( root, modules, config ):
                if os.path.isdir  ( fpath ):
                   node.register_direct_dep ( module_name )
                   deptable_populate_from_directory (
-                     fpath,
-                     module_name,
-                     rec_depth = rec_depth + 1
+                     directory = fpath,
+                     dir_name  = module_name,
+                     backtrace = backtrace + [ dir_name ],
                   )
                elif config.use_bash and \
                   fpath [ -len ( SUFFIX_BASH ): ] == SUFFIX_BASH \
@@ -210,10 +221,10 @@ def make_dependency_table ( root, modules, config ):
                   node.register_direct_dep ( module_name )
 
                   deptable_populate_from_file (
-                     fpath [ : -len ( SUFFIX_BASH ) ],
-                     fpath,
-                     module_name,
-                     rec_depth = rec_depth + 1
+                     fspath_noext = fpath [ : -len ( SUFFIX_BASH ) ],
+                     fspath       = fpath,
+                     module_name  = module_name,
+                     backtrace    = backtrace + [ dir_name ],
                   )
                elif fpath [ -len ( SUFFIX_SH ): ] == SUFFIX_SH:
 
@@ -221,10 +232,10 @@ def make_dependency_table ( root, modules, config ):
                   node.register_direct_dep ( module_name )
 
                   deptable_populate_from_file (
-                     fpath [ : -len ( SUFFIX_SH ) ],
-                     fpath,
-                     module_name,
-                     rec_depth = rec_depth + 1
+                     fspath_noext = fpath [ : -len ( SUFFIX_SH ) ],
+                     fspath       = fpath,
+                     module_name  = module_name,
+                     backtrace    = backtrace + [ dir_name ],
                   )
       # --- end of deptable_populate_from_directory (...) ---
 
@@ -233,19 +244,24 @@ def make_dependency_table ( root, modules, config ):
 
       mod_dir = os.path.abspath ( os.path.join ( root, name ) )
 
-      if rec_depth >= MAX_REC_DEPTH:
-         raise MaxRecursionDepthReached ( MAX_REC_DEPTH )
+      if len ( backtrace ) >= MAX_REC_DEPTH:
+         raise MaxRecursionDepthReached (
+            MAX_REC_DEPTH, backtrace, name
+         )
 
       elif name [-1] == os.sep or os.path.isdir ( mod_dir ):
          deptable_populate_from_directory (
-            mod_dir, os.path.normpath ( name ), rec_depth + 1
+            mod_dir, os.path.normpath ( name ), rec_depth + 1, backtrace + [ name ]
          )
 
       else:
          mod = file_lookup ( name )
          if mod:
             deptable_populate_from_file (
-               mod [0], mod [1], name, rec_depth + 1
+               fspath_noext = mod [0],
+               fspath       = mod [1],
+               module_name  = name,
+               backtrace    = backtrace
             )
          else:
             raise Exception ( "no such module: {}".format ( name ) )
@@ -253,7 +269,7 @@ def make_dependency_table ( root, modules, config ):
    # --- end of deptable_populate (...) ---
 
    for module in modules:
-      deptable_populate ( module, 0 )
+      deptable_populate ( module, [] )
 
    return D
 # --- end of make_dependency_table (...) ---
