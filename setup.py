@@ -5,15 +5,24 @@ import distutils.core
 
 VERSION = '0.0.1'
 
+MY_NAME  = 'André Erdmann'
+MY_EMAIL = 'dywi@mailerd.de'
+
+
 distutils.core.setup (
-	name         = 'R_Overlay',
+	name         = 'shlibcc',
 	version      = VERSION,
-	description  = 'shlib linker',
-	author       = 'André Erdmann',
-	author_email = 'dywi@mailerd.de',
-	license      = 'GPL',
+	description  = 'shlib linker - (semi-)automatic generation of shell scripts',
+	author       = MY_NAME,
+	author_email = MY_EMAIL,
+	license      = 'GPLv2+',
 	#url          = '',
 	packages     = (
       'shlibcclib',
 	),
+	classifiers = [
+		'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
+		'Development Status :: 3 - Alpha',
+		'Environment :: Console',
+	],
 )

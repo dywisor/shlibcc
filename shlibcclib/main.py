@@ -147,19 +147,19 @@ class ShlibccConfig ( object ):
          help    = "don\'t sort the output",
       )
 
-      arg (
-         '--tabstospaces',
-         default = False,
-         action  = "store_true",
-         help    = "convert leading tabs to spaces (NOT IMPLEMENTED)",
-      )
+#      arg (
+#         '--tabstospaces',
+#         default = False,
+#         action  = "store_true",
+#         help    = "convert leading tabs to spaces (NOT IMPLEMENTED)",
+#      )
 
-      arg (
-         '--tabsize',
-         default = 3,
-         metavar = "<int>",
-         help    = "tab size (set to <= 0 to disable entirely) (NOT IMPLEMENTED)",
-      )
+#      arg (
+#         '--tabsize',
+#         default = 3,
+#         metavar = "<int>",
+#         help    = "tab size (set to <= 0 to disable entirely) (NOT IMPLEMENTED)",
+#      )
 
       arg (
          '--write-immediate',

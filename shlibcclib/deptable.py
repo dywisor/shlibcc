@@ -251,7 +251,7 @@ def make_dependency_table ( root, modules, config ):
 
       elif name [-1] == os.sep or os.path.isdir ( mod_dir ):
          deptable_populate_from_directory (
-            mod_dir, os.path.normpath ( name ), rec_depth + 1, backtrace + [ name ]
+            mod_dir, os.path.normpath ( name ), backtrace + [ name ]
          )
 
       else:
