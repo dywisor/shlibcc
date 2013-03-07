@@ -3,11 +3,10 @@
 
 import distutils.core
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
 MY_NAME  = 'André Erdmann'
 MY_EMAIL = 'dywi@mailerd.de'
-
 
 distutils.core.setup (
 	name         = 'shlibcc',

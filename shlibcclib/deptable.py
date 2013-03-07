@@ -56,17 +56,23 @@ class DependencyTable ( object ):
       self.last   = None
    # --- end of __init__ (...) ---
 
-   def iter_nodes ( self, module_names ):
+   def iter_nodes ( self, module_names, frozen=False ):
       """Iterator that yields all requested modules.
 
       arguments:
       * module_names --
+      * frozen       -- whether to make the generated tuples hashable (True)
+                        or not (False). Defaults to False, which is faster.
       """
       for m in module_names:
          name = os.path.normpath ( m )
          node = self._table [name]
          assert node.name == name
-         yield ( node.name, node.fspath, node.direct_deps )
+         yield (
+            node.name,
+            node.fspath,
+            frozenset ( node.direct_deps ) if frozen else node.direct_deps
+         )
    # --- end of iter_entries (...) ---
 
    def __iter__ ( self ):

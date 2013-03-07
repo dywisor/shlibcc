@@ -63,6 +63,27 @@ class DependencyTree ( object ):
       self._child = None
    # --- end of __init__ (...) ---
 
+   def find ( self, name ):
+      """Searches for a module (by name) and returns its tree node if found,
+      else None.
+
+      argument:
+      * name --
+      """
+      node = self._nodes.get ( name, None )
+      if node:
+         return node
+      elif self._child:
+         return self._child.find ( name )
+      else:
+         return None
+   # --- end of find (...) ---
+
+   def has ( self, name ):
+      """Returns true if a module named "name" is in the tree, else False."""
+      return self.find ( name ) is not None
+   # --- end of has (...) ---
+
    def insert ( self, name, fspath, want_level, deps ):
       """Inserts a module into the dependency tree.
 
@@ -88,6 +109,8 @@ class DependencyTree ( object ):
             if self._child is None:
                self._child = self.__class__ ( self )
             return self._child.insert ( name, fspath, want_level, deps )
+      else:
+         return False
    # --- end of insert (...) ---
 
    def fixup ( self ):
@@ -158,6 +181,9 @@ class DependencyTree ( object ):
             nodes_todo = nodes_todo_next
 
       # -- end while;
+
+      assert len ( self._nodes ) == len ( nodes )
+      self._nodes = nodes
 
       return self
    # --- end of fixup (...) ---
@@ -246,23 +272,37 @@ def make_dependency_tree ( modules, D ):
    """Creates a dependency tree.
 
    arguments:
-   * modules -- the dop level dependencies (modules requested by the user)
+   * modules -- the top level dependencies (modules requested by the user)
    * D       -- dependency lookup table
    """
-   T          = DependencyTree()
-   level_no   = 0
-   level_deps = frozenset ( modules )
+   T               = DependencyTree()
+   # level 0 is reserved for top-level modules
+   level_no        = 0
+   level_deps      = set()
+   top_level_nodes = frozenset ( D.iter_nodes ( modules, frozen=True ) )
+
+   for node in top_level_nodes:
+      level_deps.update ( node [2] )
 
    while level_deps:
-      level_deps_next = set()
+      level_no        += 1
+      level_deps_next  = set()
 
       for name, fspath, module_deps in D.iter_nodes ( level_deps ):
          if T.insert ( name, fspath, level_no, module_deps ):
             level_deps_next |= module_deps
 
-      level_deps  = level_deps_next
-      level_no   += 1
+      level_deps = level_deps_next
+
    # -- end while;
+
+   # add remaining top-level modules to the deptree
+   #  this ensures that all modules are inserted where required (and not
+   #  necessarily where "requested", which would be level 0)
+   #  the downside is increased time complexity here
+   for node in top_level_nodes:
+      if not T.has ( node [0] ):
+         T.insert ( node [0], node [1], 0, node [2] )
 
    return T.fixup()
 # --- end of make_dependency_tree (...) ---
