@@ -7,6 +7,7 @@
 __all__ = [ 'ShlibccConfig', 'main', ]
 
 import os
+import sys
 import argparse
 
 import shlibcclib.deptable
@@ -31,6 +32,19 @@ class ShlibccConfig ( object ):
          else:
             return d
       # --- end of is_fs_dir (...) ---
+
+      def is_fs_file_or_none ( v ):
+         if v is None:
+            return None
+         else:
+            a = os.path.abspath ( v )
+            if os.path.isfile ( a ):
+               return a
+            else:
+               raise argparse.ArgumentTypeError (
+                  "file {!r} does not exist.".format ( v )
+               )
+       # --- end of is_fs_file_or_none (...) ---
 
       def couldbe_output_file ( v ):
          if v == '-':
@@ -62,8 +76,9 @@ class ShlibccConfig ( object ):
 
       arg (
          'modules',
-         nargs = "+",
-         help  = "shlib modules to process",
+         metavar = "module",
+         nargs   = "+",
+         help    = "shlib modules to process",
       )
 
       arg (
@@ -121,6 +136,7 @@ class ShlibccConfig ( object ):
          dest    = "main_script",
          default = None,
          metavar = "<file>",
+         type    = is_fs_file_or_none,
          help    = "script body (if any)",
       )
 
@@ -162,13 +178,6 @@ class ShlibccConfig ( object ):
 #      )
 
       arg (
-         '--write-immediate',
-         default = False,
-         action  = "store_true",
-         help    = 'write partial results as soon as they\'re ready',
-      )
-
-      arg (
          '--max-depth',
          default = 7,
          metavar = "n",
@@ -198,6 +207,14 @@ class ShlibccConfig ( object ):
          )
       # -- for
 
+
+      arg (
+         '--cat', '--piped',
+         default = False,
+         action  = "store_true",
+         help    = "pass stdin to the output",
+      )
+
       return parser
    # --- end of get_parser (...) ---
 
@@ -209,12 +226,11 @@ class ShlibccConfig ( object ):
       self._argv_config    = parser.parse_args()
       self.use_bash        = self._argv_config.shell_format == 'bash'
       self.use_stdout      = self._argv_config.output == '-'
-      self.write_immediate = (
-         self.use_stdout or self._argv_config.write_immediate
-      )
+   # --- end of __init__ (...) ---
 
    def __getattr__ ( self, key ):
       return getattr ( self._argv_config, key )
+   # --- end of __getattr__ (...) ---
 
 # --- end of ShlibccConfig ---
 
