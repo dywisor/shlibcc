@@ -37,8 +37,17 @@ def make ( config, format_comment=None ):
    gmtime     = time.gmtime()
    EMPTY_LINE = '#'
 
-   return '\n'.join ((
-      '#!/bin/bash' if config.use_bash else '#!/bin/sh',
+   shell_format = config.shell_format
+
+   if shell_format == 'bash':
+      shebang = '#!/bin/bash'
+   elif shell_format == 'ash':
+      shebang = '#!/bin/busybox ash'
+   else:
+      shebang = '#!/bin/sh'
+
+   return '\n'.join ( filter ( None, (
+      shebang,
       '# -*- coding: utf-8 -*-',
       EMPTY_LINE,
       fmt (
@@ -55,6 +64,10 @@ def make ( config, format_comment=None ):
          'shlib - shell function library'
       ),
       EMPTY_LINE,
+      (
+         "# *** comments have been stripped ***\n#"
+         if config.strip_comments else None
+      ),
       fmt (
          'Copyright (C) 2012-{year} {author} <{mail}>'.format (
             year   = gmtime.tm_year,
@@ -75,5 +88,5 @@ def make ( config, format_comment=None ):
       EMPTY_LINE,
       centered_comment ( "end shlib info" ),
       EMPTY_LINE,
-   ))
+   )))
 # --- end of make (...) ---

@@ -6,6 +6,7 @@
 
 __all__ = [ 'link', ]
 
+import os.path
 import sys
 
 import shlibcclib.defaultheader
@@ -21,7 +22,7 @@ def link ( config, all_modules ):
 
    use_stdout = config.use_stdout # ?
 
-   shlib = shlibcclib.shlib.ShlibFile ( header=None )
+   shlib = shlibcclib.shlib.ShlibFile ( config=config, header=None )
 
    # add header, if any
    if config.no_header:
@@ -40,12 +41,13 @@ def link ( config, all_modules ):
 
    # write all modules
    for module in all_modules:
-      shlib.add_module ( module.name, module.fspath )
+      if not os.path.isdir ( module.fspath ):
+         shlib.add_module ( module.name, module.fspath )
 
    # write the script body, if any
    if config.main_script:
       shlib.add_module ( '__main__', config.main_script )
-   else:
+   elif not config.is_lib:
       shlib.footer = "# your script starts here!"
 
    if config.use_stdout:

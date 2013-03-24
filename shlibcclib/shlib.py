@@ -103,10 +103,11 @@ class ShlibModule ( object ):
       '^\s*if\s+\[{1,2}\s+\-z\s+..*__HAVE_..*__.*\s+\]{1,2}'
    )
 
-   def __init__ ( self, module_name, module_fspath ):
+   def __init__ ( self, module_name, module_fspath, config ):
       super ( ShlibModule, self ).__init__()
       self.name         = module_name
       self.fspath       = module_fspath
+      self.config       = config
 
       self._header      = None
       self._variables   = None
@@ -122,24 +123,68 @@ class ShlibModule ( object ):
    def _read ( self ):
       lines = TextFileLines ( self.fspath )
 
-      if len ( lines [0] ) > 2 and lines [0][:2] == '#!':
-         lines.popleft()
+      if lines:
+         if len ( lines [0] ) > 2 and lines [0][:2] == '#!':
+            lines.popleft()
 
-      if (
-         self.RE_INCLUDE_PROTECTION.match ( lines [0] ) and
-         lines [1][:9]  == 'readonly ' and
-         lines [-1][:2] == 'fi'
-      ) :
-         lines.popleft()
-         lines.popleft()
-         lines.pop()
-      # -- if;
+         if (
+            self.RE_INCLUDE_PROTECTION.match ( lines [0] ) and
+            lines [1][:9]  == 'readonly ' and
+            lines [-1][:2] == 'fi'
+         ) :
+            lines.popleft()
+            lines.popleft()
+            lines.pop()
+         # -- if;
 
       self._lines = lines
    # --- end of _read (...) ---
 
    def _parse ( self ):
-      self._default = self._lines
+      def strip_comments ( lines ):
+         for line in lines:
+            sline = line.lstrip()
+            if not sline or sline[0] != '#':
+               yield line
+      # --- end of strip_comments (...) ---
+
+      def contains_code ( lines ):
+         for line in lines:
+            sline = line.lstrip()
+            if sline and not sline[0] == '#':
+               return True
+         return False
+      # --- end of strip_virtual (...) ---
+
+      def strip_dev_comments ( lines ):
+         for line in lines:
+            if line [:2] == '##' and ( len ( line ) < 3 or line [2] != '#' ):
+               pass
+            else:
+               yield line
+      # --- end of strip_dev_comments (...) ---
+
+      def strip_repeated_newline ( lines ):
+         last_line_empty = True
+         for line in lines:
+            if line:
+               last_line_empty = False
+               yield line
+            elif not last_line_empty:
+               last_line_empty = True
+               yield line
+      # --- end of strip_repeated_newline (...) ---
+
+      if self.config.strip_comments:
+         result = strip_comments ( self._lines )
+      elif self.config.strip_virtual and not contains_code ( self._lines ):
+         result = list()
+      elif self.config.strip_dev_comments:
+         result = strip_dev_comments ( self._lines )
+      else:
+         result = self._lines
+
+      self._default = list ( strip_repeated_newline ( result ) )
    # --- end of parse (...) ---
 
    def to_str ( self, section ):
@@ -174,9 +219,10 @@ class ShlibModule ( object ):
 
 class ShlibFile ( object ):
 
-   def __init__ ( self, header=None ):
+   def __init__ ( self, config, header=None ):
       self._module_order = list()
       self._modules      = dict()
+      self.config        = config
       self.header        = header
       self.pre_header    = None
       self.footer        = None
@@ -185,7 +231,7 @@ class ShlibFile ( object ):
    def add_module ( self, module_name, module_fspath ):
       assert module_name not in self._modules
 
-      module = ShlibModule ( module_name, module_fspath )
+      module = ShlibModule ( module_name, module_fspath, self.config )
 
       self._module_order.append ( module_name )
       self._modules [module_name] = module

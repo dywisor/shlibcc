@@ -13,8 +13,9 @@ import argparse
 import shlibcclib.deptable
 import shlibcclib.deptree
 import shlibcclib.linker
+import shlibcclib.message
 
-version     = ( 0, 0, 2 )
+version     = ( 0, 0, 3 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
@@ -36,6 +37,10 @@ class ShlibccConfig ( object ):
       def is_fs_file_or_none ( v ):
          if v is None:
             return None
+         elif v is True:
+            return True
+         elif v is False:
+            return False
          else:
             a = os.path.abspath ( v )
             if os.path.isfile ( a ):
@@ -70,6 +75,28 @@ class ShlibccConfig ( object ):
       )
       arg = parser.add_argument
 
+      action_grp = parser.add_argument_group (
+         "actions", "set the shlibcc mode"
+      )
+      action_arg = action_grp.add_argument
+
+      output_grp = parser.add_argument_group (
+         "output options", "control creation of the linked module"
+      )
+      output_arg = output_grp.add_argument
+
+      shlib_grp = parser.add_argument_group (
+         "shlib options", "shell module library options"
+      )
+      shlib_arg = shlib_grp.add_argument
+
+      strip_grp = parser.add_argument_group (
+         "strip", "remove code/comments",
+      )
+      strip_arg = strip_grp.add_argument
+
+
+
       arg (
          '--version', '-V', action='version', version=self.version_str
       )
@@ -77,35 +104,11 @@ class ShlibccConfig ( object ):
       arg (
          'modules',
          metavar = "module",
-         nargs   = "+",
+         nargs   = "*",
          help    = "shlib modules to process",
       )
 
-      arg (
-         '--shell',
-         default ='sh',
-         choices = frozenset ( { 'sh', 'ash', 'bash' } ),
-         dest    = "shell_format",
-         help    = "output format",
-      )
-
-      arg (
-         '--bash',
-         dest    = "shell_format",
-         action  = "store_const",
-         const   = "bash",
-         help    = "compile for bash",
-      )
-
-      arg (
-         '--sh',
-         dest    = "shell_format",
-         action  = "store_const",
-         const   = "sh",
-         help    = "compile for generic sh",
-      )
-
-      arg (
+      shlib_arg (
          '--shlib-dir', '-S',
          dest    = "shlib_dir",
          default = os.getcwd(),
@@ -114,7 +117,39 @@ class ShlibccConfig ( object ):
          help    = "shlib root directory",
       )
 
-      arg (
+      shlib_arg (
+         '--shell',
+         default ='sh',
+         choices = frozenset ( { 'sh', 'ash', 'bash' } ),
+         dest    = "shell_format",
+         help    = "shell interpreter that will be used, defaults to sh",
+      )
+
+      shlib_arg (
+         '--bash',
+         dest    = "shell_format",
+         action  = "store_const",
+         const   = "bash",
+         help    = "prefer bash module files where available",
+      )
+
+      shlib_arg (
+         '--sh',
+         dest    = "shell_format",
+         action  = "store_const",
+         const   = "sh",
+         help    = "compile for generic sh",
+      )
+
+      shlib_arg (
+         '--ash',
+         dest    = "shell_format",
+         action  = "store_const",
+         const   = "ash",
+         help    = "compile for busybox\' ash",
+      )
+
+      output_arg (
          '--output', '-O',
          dest    = "output",
          default = '-',
@@ -123,7 +158,7 @@ class ShlibccConfig ( object ):
          help    = "output file, '-' for stdout",
       )
 
-      arg (
+      output_arg (
          '--stdout', '-1',
          dest    = "output",
          action  = "store_const",
@@ -131,7 +166,7 @@ class ShlibccConfig ( object ):
          help    = "write to stdout",
       )
 
-      arg (
+      output_arg (
          '--main',
          dest    = "main_script",
          default = None,
@@ -140,14 +175,35 @@ class ShlibccConfig ( object ):
          help    = "script body (if any)",
       )
 
-      arg (
+      output_arg (
+         '--depfile', '-D',
+         default    = None,
+         const      = True,
+         nargs      = "?",
+         metavar    = "<file>",
+         type       = is_fs_file_or_none,
+         help       = '''
+            file that lists extra dependencies or read the main script's deps
+         '''
+      )
+
+      output_arg (
+         '--exclude', '-x',
+         dest    = "modules_exclude",
+         default = argparse.SUPPRESS,
+         action  = "append",
+         help    = "module dependencies to ignore",
+         metavar = "<module>",
+      )
+
+      output_arg (
          '--no-header',
          default = False,
          action  = "store_true",
          help    = "don\'t write the header"
       )
 
-      arg (
+      output_arg (
          '--header-file', '-H',
          dest    = "header_file",
          default = None,
@@ -155,12 +211,30 @@ class ShlibccConfig ( object ):
          help    = "custom header file",
       )
 
+      # doesn't do much currently
+      #  (removes the "# your script starts here!" line)
+      output_arg (
+         '--as-lib', '-L',
+         dest    = "is_lib",
+         default = False,
+         action  = "store_true",
+         help    = "indicates that the result will be a library",
+      )
+
+      output_arg (
+         '--allow-empty',
+         dest    = "allow_empty",
+         default = False,
+         action  = "store_true",
+         help    = "create output even if no modules given",
+      )
+
       arg (
          '--no-sort',
          dest    = "no_sort",
          default = False,
          action  = "store_true",
-         help    = "don\'t sort the output",
+         help    = "don\'t sort the modules (UNSAFE)",
       )
 
 #      arg (
@@ -177,7 +251,7 @@ class ShlibccConfig ( object ):
 #         help    = "tab size (set to <= 0 to disable entirely) (NOT IMPLEMENTED)",
 #      )
 
-      arg (
+      shlib_arg (
          '--max-depth',
          default = 7,
          metavar = "n",
@@ -187,8 +261,21 @@ class ShlibccConfig ( object ):
          ''',
       )
 
+      arg (
+         '--cat', '--piped',
+         default = False,
+         action  = "store_true",
+         help    = "pass stdin to the output",
+      )
 
       arg (
+         '--debug', '--dbg',
+         default = False,
+         action  = "store_true",
+         help    = "enable debug print statements",
+      )
+
+      action_arg (
          '--action',
          default = DEFAULT_ACTION,
          metavar = "<action>",
@@ -196,9 +283,9 @@ class ShlibccConfig ( object ):
          help    = "choose from {}.".format ( ', '.join ( ACTIONS ) ),
       )
 
-      for action in ACTIONS:
-         arg (
-            '--' + action,
+      for index, action in enumerate ( ACTIONS ):
+         action_arg (
+            '--' + action, '-s' + str ( index ),
             default = argparse.SUPPRESS,
             dest    = "action",
             action  = "store_const",
@@ -207,25 +294,94 @@ class ShlibccConfig ( object ):
          )
       # -- for
 
-
-      arg (
-         '--cat', '--piped',
+      strip_arg (
+         '--strip-comments',
          default = False,
          action  = "store_true",
-         help    = "pass stdin to the output",
+         help    = "remove all comments (EXPERIMENTAL)",
+      )
+
+      strip_arg (
+         '--strip-virtual',
+         default = False,
+         action  = "store_true",
+         help    = "remove module code that contains comments only",
+      )
+
+      strip_arg (
+         '--keep-dev-comments',
+         dest    = "strip_dev_comments",
+         default = True,
+         action  = "store_false",
+         help    = "keep dev notes",
       )
 
       return parser
    # --- end of get_parser (...) ---
 
+   def _expand_modules ( self ):
+      if self._argv_config.depfile is True:
+
+         if self._argv_config.main_script:
+            # "inlined" code copy from deptable.py's depfile_lookup()
+
+            SUFFIX_DEPEND = ".depend"
+
+            depfile = self._argv_config.main_script + SUFFIX_DEPEND
+
+            if not os.path.isfile ( depfile ):
+               depfile = (
+                  os.path.splitext ( self._argv_config.main_script ) [0]
+                  + SUFFIX_DEPEND
+               )
+
+               if not os.path.isfile ( depfile ):
+                  return False
+         else:
+            self.parser.error ( "--depfile without an arg requires --main" )
+
+      elif self._argv_config.depfile:
+         depfile = self._argv_config.depfile
+      else:
+         return False
+
+      with open ( depfile, 'rt' ) as FH:
+         deps = [ l.strip() for l in FH.readlines() ]
+
+      if deps:
+         modules = list ( self._argv_config.modules )
+
+         for dep in filter (
+            lambda d : d and d [0] != '#',
+            deps
+         ):
+            modules.append ( dep )
+
+         self.modules = modules
+
+   # --- end of _expand_modules (...) ---
 
    def __init__ ( self, actions, default_action ):
       assert default_action in actions
       self.version_str     = __version__
-      parser               = self.get_parser ( actions, default_action )
-      self._argv_config    = parser.parse_args()
+      self.parser          = self.get_parser ( actions, default_action )
+      self._argv_config    = self.parser.parse_args()
       self.use_bash        = self._argv_config.shell_format == 'bash'
       self.use_stdout      = self._argv_config.output == '-'
+      self.modules_exclude = (
+         frozenset ( self._argv_config.modules_exclude )
+         if hasattr ( self._argv_config, 'modules_exclude' )
+         else frozenset()
+      )
+
+      self._expand_modules()
+
+      if not self.modules and not self._argv_config.allow_empty:
+         self.parser.error ( "no modules specified, try --allow-empty" )
+
+      shlibcclib.message.DEBUG_PRINT = bool ( self._argv_config.debug )
+
+      #del self.parser
    # --- end of __init__ (...) ---
 
    def __getattr__ ( self, key ):
@@ -244,10 +400,11 @@ def main ( default_action ):
    ACTION_LINK     = 'link'
    ACTION_DEPTABLE = 'deptable'
    ACTION_DEPTREE  = 'deptree'
+   ACTION_MODLIST  = 'list-modules'
 
    # parse args / create config
    config = ShlibccConfig (
-      [ ACTION_LINK, ACTION_DEPTABLE, ACTION_DEPTREE ],
+      [ ACTION_MODLIST, ACTION_DEPTABLE, ACTION_DEPTREE, ACTION_LINK ],
       default_action
    )
 
@@ -258,7 +415,17 @@ def main ( default_action ):
       config   = config,
    )
 
-   if config.action == ACTION_DEPTABLE:
+   if config.action == ACTION_MODLIST:
+
+      print (
+         '\n'.join (
+            sorted (
+               deptable.names()
+            )
+         )
+      )
+
+   elif config.action == ACTION_DEPTABLE:
 
       print ( str ( deptable ) )
 

@@ -8,6 +8,10 @@ __all__ = [ 'DependencyTable', 'make_dependency_table' ]
 
 import os
 
+import shlibcclib.message
+
+debug_print = shlibcclib.message.debug_print
+
 class MaxRecursionDepthReached ( Exception ):
 
    def __init__ ( self, N, backtrace, name ):
@@ -75,6 +79,10 @@ class DependencyTable ( object ):
          )
    # --- end of iter_entries (...) ---
 
+   def names ( self ):
+      return self._table.keys()
+   # --- end of names (...) ---
+
    def __iter__ ( self ):
       """)terator that yields all modules."""
       return iter ( self._table.values() )
@@ -123,9 +131,9 @@ def make_dependency_table ( root, modules, config ):
    SUFFIX_SH     = '.sh'
    SUFFIX_BASH   = '.bash'
 
-   STRIP_DIR     = os.sep + '.'
-
-   MAX_REC_DEPTH = config.max_depth
+   STRIP_DIR       = os.sep + '.'
+   MAX_REC_DEPTH   = config.max_depth
+   MODULES_EXCLUDE = config.modules_exclude
 
    D = DependencyTable()
 
@@ -175,22 +183,46 @@ def make_dependency_table ( root, modules, config ):
                MAX_REC_DEPTH, backtrace, module_name
             )
 
+         elif module_name in MODULES_EXCLUDE:
+
+            return False
+
          elif D.add_new ( module_name, fspath ):
             node    = D.last
             depfile = depfile_lookup ( fspath_noext, fspath )
 
             if depfile:
+               debug_print (
+                  "depfile of module {!r} is {!r}".format (
+                     module_name, depfile
+                  )
+               )
+
                # recursion, fetch all deps and parse them afterwards
                with open ( depfile, 'rt' ) as FH:
                   deps = [ l.strip() for l in FH.readlines() ]
 
                for dep in deps:
                   if dep and dep [0] != '#':
-                     node.register_direct_dep ( dep )
-                     deptable_populate (
+                     if deptable_populate (
                         name      = dep,
                         backtrace = backtrace,
-                     )
+                     ):
+                        debug_print (
+                           "module {!r}: add dep {!r}".format (
+                              module_name, dep
+                           )
+                        )
+                        node.register_direct_dep ( dep )
+            else:
+               debug_print (
+                  "module {!r} has no dependencies.".format ( module_name )
+               )
+
+
+            return True
+         else:
+            return True
       # --- end of deptable_populate_from_file (...) ---
 
       def deptable_populate_from_directory ( directory, dir_name, backtrace ):
@@ -201,6 +233,10 @@ def make_dependency_table ( root, modules, config ):
             raise MaxRecursionDepthReached (
                MAX_REC_DEPTH, backtrace, dir_name
             )
+
+         elif dir_name in MODULES_EXCLUDE:
+
+            return False
 
          elif D.add_new ( dir_name, directory ):
             node = D.last
@@ -214,35 +250,41 @@ def make_dependency_table ( root, modules, config ):
                   module_name = dir_name + os.sep + fname
 
                if os.path.isdir  ( fpath ):
-                  node.register_direct_dep ( module_name )
-                  deptable_populate_from_directory (
+                  if deptable_populate_from_directory (
                      directory = fpath,
                      dir_name  = module_name,
                      backtrace = backtrace + [ dir_name ],
-                  )
+                  ):
+                     node.register_direct_dep ( module_name )
                elif config.use_bash and \
                   fpath [ -len ( SUFFIX_BASH ): ] == SUFFIX_BASH \
                :
                   module_name = module_name [ : - len ( SUFFIX_BASH ) ]
-                  node.register_direct_dep ( module_name )
 
-                  deptable_populate_from_file (
+                  if deptable_populate_from_file (
                      fspath_noext = fpath [ : -len ( SUFFIX_BASH ) ],
                      fspath       = fpath,
                      module_name  = module_name,
                      backtrace    = backtrace + [ dir_name ],
-                  )
+                  ):
+                     node.register_direct_dep ( module_name )
+
                elif fpath [ -len ( SUFFIX_SH ): ] == SUFFIX_SH:
 
                   module_name = module_name [ : - len ( SUFFIX_SH ) ]
-                  node.register_direct_dep ( module_name )
 
-                  deptable_populate_from_file (
+                  if deptable_populate_from_file (
                      fspath_noext = fpath [ : -len ( SUFFIX_SH ) ],
                      fspath       = fpath,
                      module_name  = module_name,
                      backtrace    = backtrace + [ dir_name ],
-                  )
+                  ):
+                     node.register_direct_dep ( module_name )
+               # -- end if;
+            # -- end for;
+            return True
+         else:
+            return True
       # --- end of deptable_populate_from_directory (...) ---
 
 
@@ -256,21 +298,26 @@ def make_dependency_table ( root, modules, config ):
          )
 
       elif name [-1] == os.sep or os.path.isdir ( mod_dir ):
-         deptable_populate_from_directory (
+         return deptable_populate_from_directory (
             mod_dir, os.path.normpath ( name ), backtrace + [ name ]
          )
 
       else:
          mod = file_lookup ( name )
          if mod:
-            deptable_populate_from_file (
+            return deptable_populate_from_file (
                fspath_noext = mod [0],
                fspath       = mod [1],
                module_name  = name,
                backtrace    = backtrace
             )
          else:
-            raise Exception ( "no such module: {}".format ( name ) )
+            raise Exception (
+               "no such module: {}; backtrace : {}".format (
+                  name,
+                  ' -> '.join ( backtrace ) if backtrace else '<none>'
+               )
+            )
 
    # --- end of deptable_populate (...) ---
 
