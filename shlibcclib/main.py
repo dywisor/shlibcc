@@ -95,6 +95,10 @@ class ShlibccConfig ( object ):
       )
       strip_arg = strip_grp.add_argument
 
+      dep_grp = parser.add_argument_group (
+         "deptable/deptree options"
+      )
+      dep_arg = dep_grp.add_argument
 
 
       arg (
@@ -316,6 +320,15 @@ class ShlibccConfig ( object ):
          help    = "keep dev notes",
       )
 
+      dep_arg (
+         '--depends', '-d',
+         dest    = "restrict_depends",
+         default = list(),
+         action  = "append",
+         help    = "only print modules that depend on <module>",
+         metavar = "<module>",
+      )
+
       return parser
    # --- end of get_parser (...) ---
 
@@ -365,6 +378,7 @@ class ShlibccConfig ( object ):
       assert default_action in actions
       self.version_str     = __version__
       self.parser          = self.get_parser ( actions, default_action )
+      self.error           = self.parser.error
       self._argv_config    = self.parser.parse_args()
       self.use_bash        = self._argv_config.shell_format == 'bash'
       self.use_stdout      = self._argv_config.output == '-'
@@ -376,12 +390,18 @@ class ShlibccConfig ( object ):
 
       self._expand_modules()
 
-      if not self.modules and not self._argv_config.allow_empty:
+      self.restrict_depends = frozenset ( self._argv_config.restrict_depends )
+
+      if self.restrict_depends:
+        if not self.modules:
+           self.modules = [ '.', ]
+
+      elif not self.modules and not self._argv_config.allow_empty:
          self.parser.error ( "no modules specified, try --allow-empty" )
 
       shlibcclib.message.DEBUG_PRINT = bool ( self._argv_config.debug )
 
-      #del self.parser
+      #del self.parser, self.error
    # --- end of __init__ (...) ---
 
    def __getattr__ ( self, key ):
@@ -415,7 +435,23 @@ def main ( default_action ):
       config   = config,
    )
 
-   if config.action == ACTION_MODLIST:
+
+   if config.restrict_depends:
+
+      print (
+         '\n'.join (
+            sorted (
+               node.name for node in deptable
+               if (
+                  ( node.name != '.' )
+                  and ( node.direct_deps & config.restrict_depends )
+               )
+            )
+         )
+         or "<none>"
+      )
+
+   elif config.action == ACTION_MODLIST:
 
       print (
          '\n'.join (
@@ -434,6 +470,7 @@ def main ( default_action ):
       deptree = shlibcclib.deptree.make_dependency_tree (
          config.modules, deptable
       )
+
       print ( str ( deptree ) )
 
    elif config.action == ACTION_LINK:
