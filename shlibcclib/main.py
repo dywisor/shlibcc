@@ -208,6 +208,13 @@ class ShlibccConfig ( object ):
       )
 
       output_arg (
+         '--short-header',
+         default = False,
+         action  = "store_true",
+         help    = 'write a minimal header',
+      )
+
+      output_arg (
          '--header-file', '-H',
          dest    = "header_file",
          default = None,
@@ -299,6 +306,16 @@ class ShlibccConfig ( object ):
       # -- for
 
       strip_arg (
+         '--strip-all', '--strip',
+         dest    = "strip_all",
+         default = False,
+         action  = "store_true",
+         help    = '''
+            enable --strip-comments, --strip-virtual and --no-enclose-modules
+         '''
+      )
+
+      strip_arg (
          '--strip-comments',
          default = False,
          action  = "store_true",
@@ -318,6 +335,14 @@ class ShlibccConfig ( object ):
          default = True,
          action  = "store_false",
          help    = "keep dev notes",
+      )
+
+      strip_arg (
+         '--no-enclose-modules',
+         dest    = "enclose_modules",
+         default = True,
+         action  = "store_false",
+         help    = "don\'t print module begin/end lines",
       )
 
       dep_arg (
@@ -382,6 +407,14 @@ class ShlibccConfig ( object ):
       self._argv_config    = self.parser.parse_args()
       self.use_bash        = self._argv_config.shell_format == 'bash'
       self.use_stdout      = self._argv_config.output == '-'
+
+      if self.strip_all:
+         self.strip_comments     = True
+         self.strip_virtual      = True
+         self.strip_dev_comments = True
+         self.enclose_modules    = False
+      # -- end if strip_all;
+
       self.modules_exclude = (
          frozenset ( self._argv_config.modules_exclude )
          if hasattr ( self._argv_config, 'modules_exclude' )

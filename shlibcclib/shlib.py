@@ -175,7 +175,9 @@ class ShlibModule ( object ):
                yield line
       # --- end of strip_repeated_newline (...) ---
 
-      if self.config.strip_comments:
+      if self.name == '__main__':
+         result = self._lines
+      elif self.config.strip_comments:
          result = strip_comments ( self._lines )
       elif self.config.strip_virtual and not contains_code ( self._lines ):
          result = list()
@@ -287,11 +289,12 @@ class ShlibFile ( object ):
       for s in iterate_str_lines ( self.pre_header ):
          yield s
 
-      for s in iterate_str_lines ( self.header ):
+      for s in iterate_str_lines ( self.header, newline_end=False ):
          yield s
 
 
-      first_section = True
+      first_section   = True
+      enclose_modules = self.config.enclose_modules
 
       for section in (
          'header', 'constants', 'variables', 'functions',
@@ -313,12 +316,16 @@ class ShlibFile ( object ):
 
                   section_empty = False
 
+
                yield EMPTY_STR
-               yield "### begin module {} ###".format ( m.name )
-               yield EMPTY_STR
-               yield _str
-               yield EMPTY_STR
-               yield "### end module {} ###".format ( m.name )
+               if enclose_modules:
+                  yield "### begin module {} ###".format ( m.name )
+                  yield EMPTY_STR
+                  yield _str
+                  yield EMPTY_STR
+                  yield "### end module {} ###".format ( m.name )
+               else:
+                  yield _str
 
 
          if not section_empty:
