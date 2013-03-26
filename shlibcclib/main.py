@@ -340,9 +340,20 @@ class ShlibccConfig ( object ):
       strip_arg (
          '--no-enclose-modules',
          dest    = "enclose_modules",
-         default = True,
+         default = argparse.SUPPRESS,
          action  = "store_false",
-         help    = "don\'t print module begin/end lines",
+         help    = "don\'t print module begin/end lines (default if not a lib)",
+      )
+
+      strip_arg (
+         '--enclose-modules',
+         dest    = "enclose_modules",
+         default = argparse.SUPPRESS,
+         action  = "store_true",
+         help    = '''
+            print module begin/end lines
+            (default if a library or no --main given)
+         '''
       )
 
       dep_arg (
@@ -413,6 +424,10 @@ class ShlibccConfig ( object ):
          self.strip_virtual      = True
          self.strip_dev_comments = True
          self.enclose_modules    = False
+      elif not hasattr ( self._argv_config, 'enclose_module' ):
+         self.enclose_modules = bool (
+            self._argv_config.is_lib or not self._argv_config.main_script
+         )
       # -- end if strip_all;
 
       self.modules_exclude = (
