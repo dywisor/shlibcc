@@ -14,7 +14,7 @@ EGIT_REPO_URI="http://git.erdmann.es/get/${PN}"
 DESCRIPTION="shlib linker"
 HOMEPAGE="http://git.erdmann.es/?p=shlibcc;a=blob_plain;f=README;hb=HEAD"
 
-LICENSE="GPL-2"
+LICENSE="GPL-2+"
 SLOT="0"
 IUSE=""
 
