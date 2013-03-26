@@ -15,7 +15,7 @@ import shlibcclib.deptree
 import shlibcclib.linker
 import shlibcclib.message
 
-version     = ( 0, 0, 3 )
+version     = ( 0, 0, 4 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
