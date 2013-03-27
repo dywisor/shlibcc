@@ -242,16 +242,18 @@ class ShlibccConfig ( object ):
 
       output_arg (
          '--shell-opts',
+         dest    = "shell_opts",
          default = None,
-         metavar = "<option[s]>",
+         metavar = "<options>",
          help    = '''
-            add a \'set -<option[s]>\' statement to the default header
+            add a \'set -<options>\' statement to the default header
          '''
       )
 
       output_arg (
          '-u',
          dest   = "shell_opts",
+         default = None,
          action = "store_const",
          const  = "u",
          help   = "same as --shell-opts u",
