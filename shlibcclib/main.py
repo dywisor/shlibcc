@@ -240,6 +240,23 @@ class ShlibccConfig ( object ):
          help    = "create output even if no modules given",
       )
 
+      output_arg (
+         '--shell-opts',
+         default = None,
+         metavar = "<option[s]>",
+         help    = '''
+            add a \'set -<option[s]>\' statement to the default header
+         '''
+      )
+
+      output_arg (
+         '-u',
+         dest   = "shell_opts",
+         action = "store_const",
+         const  = "u",
+         help   = "same as --shell-opts u",
+      )
+
       arg (
          '--no-sort',
          dest    = "no_sort",
@@ -419,7 +436,11 @@ class ShlibccConfig ( object ):
       self.use_bash        = self._argv_config.shell_format == 'bash'
       self.use_stdout      = self._argv_config.output == '-'
 
-      if self.strip_all:
+      if self._argv_config.shell_opts:
+         self.shell_opts = self._argv_config.shell_opts.lstrip ( '-' )
+
+
+      if self._argv_config.strip_all:
          self.strip_comments     = True
          self.strip_virtual      = True
          self.strip_dev_comments = True
