@@ -84,7 +84,7 @@ class DependencyTable ( object ):
    # --- end of names (...) ---
 
    def __iter__ ( self ):
-      """)terator that yields all modules."""
+      """Iterator that yields all modules."""
       return iter ( self._table.values() )
    # --- end of __iter__ (...) ---
 
