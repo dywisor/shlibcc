@@ -11,11 +11,11 @@ import sys
 import argparse
 
 import shlibcclib.deptable
-import shlibcclib.deptree
+import shlibcclib.depgraph
 import shlibcclib.linker
 import shlibcclib.message
 
-version     = ( 0, 0, 4 )
+version     = ( 0, 0, 5 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
@@ -488,14 +488,19 @@ def main ( default_action ):
    * default_action -- the action that should be performed if not overridden
                        by command line args
    """
-   ACTION_LINK     = 'link'
-   ACTION_DEPTABLE = 'deptable'
-   ACTION_DEPTREE  = 'deptree'
-   ACTION_MODLIST  = 'list-modules'
+   ACTION_LINK             = 'link'
+   ACTION_DEPTABLE         = 'deptable'
+   ACTION_DEPGRAPH         = 'depgraph'
+   ACTION_DEPGRAPH_REVERSE = 'revdep'
+   ACTION_DEPLIST          = 'deplist'
+   ACTION_MODLIST          = 'list-modules'
 
    # parse args / create config
    config = ShlibccConfig (
-      [ ACTION_MODLIST, ACTION_DEPTABLE, ACTION_DEPTREE, ACTION_LINK ],
+      [
+         ACTION_MODLIST, ACTION_DEPTABLE, ACTION_DEPGRAPH,
+         ACTION_DEPGRAPH_REVERSE, ACTION_DEPLIST, ACTION_LINK
+      ],
       default_action
    )
 
@@ -536,13 +541,23 @@ def main ( default_action ):
 
       print ( str ( deptable ) )
 
-   elif config.action == ACTION_DEPTREE:
+   elif config.action == ACTION_DEPGRAPH:
 
-      deptree = shlibcclib.deptree.make_dependency_tree (
-         config.modules, deptable
-      )
+      depgraph = shlibcclib.depgraph.DependencyGraph ( deptable )
 
-      print ( str ( deptree ) )
+      print ( depgraph.visualize_edges() )
+
+   elif config.action == ACTION_DEPGRAPH_REVERSE:
+
+      depgraph = shlibcclib.depgraph.DependencyGraph ( deptable )
+
+      print ( depgraph.visualize_edges ( reverse=True ) )
+
+   elif config.action == ACTION_DEPLIST:
+
+      deplist = shlibcclib.depgraph.DependencyList ( deptable )
+
+      print ( str ( deplist ) )
 
    elif config.action == ACTION_LINK:
 
@@ -551,7 +566,7 @@ def main ( default_action ):
       else:
          shlibcclib.linker.link (
             config,
-            shlibcclib.deptree.make_dependency_tree ( config.modules, deptable )
+            shlibcclib.depgraph.DependencyList ( deptable )
          )
 
    else:
