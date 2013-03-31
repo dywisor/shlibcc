@@ -18,6 +18,7 @@ distutils.core.setup (
 	#url          = '',
 	packages     = (
       'shlibcclib',
+      'shlibcclib/generic',
 	),
 	classifiers = [
 		'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
