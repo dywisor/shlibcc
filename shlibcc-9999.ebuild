@@ -9,10 +9,10 @@ PYTHON_COMPAT="python2_7 python3_1 python3_2"
 
 inherit base python-distutils-ng git-2
 
-EGIT_REPO_URI="http://git.erdmann.es/get/${PN}"
+EGIT_REPO_URI="git://git.erdmann.es/dywi/${PN}.git"
 
 DESCRIPTION="shlib linker"
-HOMEPAGE="http://git.erdmann.es/?p=shlibcc;a=blob_plain;f=README;hb=HEAD"
+HOMEPAGE="http://git.erdmann.es/trac/dywi_${PN}"
 
 LICENSE="GPL-2+"
 SLOT="0"
