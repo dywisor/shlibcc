@@ -58,10 +58,11 @@ class DependencyList ( object ):
    # --- end of __iter__ (...) ---
 
    def __str__ ( self ):
-      max_i_len = max ( 1, len ( str ( len ( self.deplist ) ) ) )
-
-      return '\n'.join (
-         "{n:>{l}}: {name}".format ( n=( i + 1 ), name=data.name, l=max_i_len )
-         for i, data in enumerate ( self.deplist )
-      )
+#      max_i_len = max ( 1, len ( str ( len ( self.deplist ) ) ) )
+#
+#      return '\n'.join (
+#         "{n:>{l}}: {name}".format ( n=( i + 1 ), name=data.name, l=max_i_len )
+#         for i, data in enumerate ( self.deplist )
+#      )
+      return '\n'.join ( data.name for data in self.deplist )
    # --- end of __str__ (...) ---
