@@ -1,4 +1,4 @@
-# shlibcc -- default header for the shlib linker
+# shlibcc -- (generic) directed graph
 # -*- coding: utf-8 -*-
 # Copyright (C) 2013 André Erdmann <dywi@mailerd.de>
 # Distributed under the terms of the GNU General Public License;

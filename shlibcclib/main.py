@@ -1,4 +1,4 @@
-# shlibcc -- shlib module linker, config
+# shlibcc -- main() and config
 # -*- coding: utf-8 -*-
 # Copyright (C) 2013 André Erdmann <dywi@mailerd.de>
 # Distributed under the terms of the GNU General Public License;
@@ -15,7 +15,7 @@ import shlibcclib.depgraph
 import shlibcclib.linker
 import shlibcclib.message
 
-version     = ( 0, 0, 5 )
+version     = ( 0, 0, 6 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
