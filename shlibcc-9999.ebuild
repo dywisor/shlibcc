@@ -16,7 +16,7 @@ HOMEPAGE="http://git.erdmann.es/trac/dywi_${PN}"
 
 LICENSE="GPL-2+"
 SLOT="0"
-IUSE=""
+IUSE="tools"
 
 KEYWORDS=""
 
@@ -30,5 +30,13 @@ python_prepare_all() {
 }
 
 python_install_all() {
-	newbin ${PN}.py ${PN}
+	newbin "${PN}.py" "${PN}"
+	if use tools; then
+		local mode
+		for mode in \
+			'link' 'deplist' 'revdep' 'depgraph' 'deptable' 'list-modules'
+		do
+			newbin "${PN}.py" "${PN}-${mode}"
+		done
+	fi
 }
