@@ -267,6 +267,14 @@ class ShlibccConfig ( object ):
          help    = "don\'t sort the modules (UNSAFE)",
       )
 
+      arg (
+         '--stable-sort',
+         dest    = "stable_sort",
+         default = False,
+         action  = "store_true",
+         help    = "use stable sorting",
+      )
+
 #      arg (
 #         '--tabstospaces',
 #         default = False,
@@ -555,7 +563,9 @@ def main ( default_action ):
 
    elif config.action == ACTION_DEPLIST:
 
-      deplist = shlibcclib.depgraph.DependencyList ( deptable )
+      deplist = shlibcclib.depgraph.DependencyList (
+         deptable, config.stable_sort
+      )
 
       print ( str ( deplist ) )
 
@@ -566,7 +576,7 @@ def main ( default_action ):
       else:
          shlibcclib.linker.link (
             config,
-            shlibcclib.depgraph.DependencyList ( deptable )
+            shlibcclib.depgraph.DependencyList ( deptable, config.stable_sort )
          )
 
    else:

@@ -232,6 +232,7 @@ class DirectedGraph ( object ):
 
             if not dest_node.has_incoming_edges():
                T._entry_nodes.add ( dest_node )
+      # --- end while
 
       if T.has_edges():
          raise self.GraphException ( "Graph has >= 1 cycle." )
@@ -243,10 +244,58 @@ class DirectedGraph ( object ):
 
    # --- end of toposort_kahn (...) ---
 
-   def toposort ( self ):
+   def toposort_kahn_stable ( self ):
+      """Stable topological ordering using Kahn's algorithm."""
+      def nodesort ( iterable ):
+         return sorted ( iterable, key=lambda node: node.get_name() )
+      # --- end of nodesort (...) ---
+
+      # it's important that sorted returns an independent iterable,
+      # i.e. not a view (iterator, ...), see the for-loop below
+      assert isinstance ( sorted ( set() ), list )
+
+      # T is a work copy of self
+      T = self.copy()
+      T._entry_nodes = nodesort ( T._entry_nodes )
+
+      sorted_nodes = list()
+
+      while T._entry_nodes:
+         new_entry_nodes = False
+         entry_node      = T._entry_nodes.pop()
+         sorted_nodes.append ( entry_node )
+
+         for dest_node in nodesort ( entry_node.get_nodes() ):
+            # modifying entry_node's edges while iterating over them,
+            # that's why sorted() has to return an independent iterable
+            entry_node.remove_edge ( dest_node, remove_reverse=True )
+
+            if not dest_node.has_incoming_edges():
+               new_entry_nodes = True
+               T._entry_nodes.append ( dest_node )
+
+         if new_entry_nodes:
+            T._entry_nodes = nodesort ( T._entry_nodes )
+      # --- end while
+
+      if T.has_edges():
+         raise self.GraphException ( "Graph has >= 1 cycle." )
+      else:
+         return list (
+            ( node.get_name(), node.get_data() )
+            for node in sorted_nodes
+         )
+
+   # --- end of toposort_kahn_stable (...) ---
+
+   def toposort ( self, stable=False ):
       """Sorts the nodes of this graph in topological order.
 
       Returns a (sorted) list of 2-tuples ( node_name, node_data ).
+
+      arguments:
+      * stable -- whether the result should be "stable" (predictable order)
+                  or not
       """
-      return self.toposort_kahn()
+      return self.toposort_kahn_stable() if stable else self.toposort_kahn()
    # --- end of sort_topological (...) ---

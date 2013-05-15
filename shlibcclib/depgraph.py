@@ -35,12 +35,12 @@ class DependencyGraph ( shlibcclib.generic.graph.DirectedGraph ):
       self.expand()
    # --- end of __init__ (...) ---
 
-   def sort_dependencies ( self ):
+   def sort_dependencies ( self, stable ):
       # the result of toposort is a list where a node at position k
       # _can_ depend on any other node with position l >= k
       # => reverse the list
       return list (
-         item [1] for item in reversed ( self.toposort() )
+         item [1] for item in reversed ( self.toposort ( stable=stable ) )
       )
    # --- end of sort_dependencies (...) ---
 
@@ -48,9 +48,9 @@ class DependencyGraph ( shlibcclib.generic.graph.DirectedGraph ):
 
 class DependencyList ( object ):
 
-   def __init__ ( self, deptable ):
+   def __init__ ( self, deptable, stable_sort ):
       self.depgraph = DependencyGraph ( deptable )
-      self.deplist  = self.depgraph.sort_dependencies()
+      self.deplist  = self.depgraph.sort_dependencies ( stable=stable_sort )
    # --- end of __init__ (...) ---
 
    def __iter__ ( self ):
