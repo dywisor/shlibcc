@@ -15,7 +15,7 @@ import shlibcclib.depgraph
 import shlibcclib.linker
 import shlibcclib.message
 
-version     = ( 0, 0, 6 )
+version     = ( 0, 0, 7 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
@@ -427,11 +427,41 @@ class ShlibccConfig ( object ):
       if deps:
          modules = list ( self._argv_config.modules )
 
+         DEPFILE_DIR      = os.path.dirname ( depfile )
+         SHLIB_DIR_PARENT = os.path.dirname ( self.shlib_dir )
+
+         def unrel ( path ):
+            # lazy implementation
+            if path[:2] == '.' + os.sep or path[:3] == '..' + os.sep:
+               abspath = os.path.abspath (
+                  os.path.join ( DEPFILE_DIR, path )
+               )
+
+            elif path [0] == os.sep:
+               #assert len ( path ) > 1
+               if path[1] == os.sep:
+                  abspath = os.path.abspath ( path )
+               else:
+                  abspath = os.path.abspath (
+                     os.path.join ( SHLIB_DIR_PARENT, path.lstrip ( os.sep ) )
+                  )
+            else:
+               return path
+
+            if os.path.isdir ( abspath ):
+               raise Exception (
+                  "direct depfile imports must be files, not directories."
+               )
+            else:
+               return abspath
+         # --- end of unrel (...) ---
+
+
          for dep in filter (
             lambda d : d and d [0] != '#',
             deps
          ):
-            modules.append ( dep )
+            modules.append ( unrel ( dep ) )
 
          self.modules = modules
 
