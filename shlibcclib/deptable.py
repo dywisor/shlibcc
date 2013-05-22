@@ -7,6 +7,7 @@
 __all__ = [ 'DependencyTable', 'make_dependency_table' ]
 
 import os
+import sys
 
 import shlibcclib.message
 
@@ -134,8 +135,36 @@ def make_dependency_table ( root, modules, config ):
    STRIP_DIR       = os.sep + '.'
    MAX_REC_DEPTH   = config.max_depth
    MODULES_EXCLUDE = config.modules_exclude
+   BLOCKER_ACTION  = {
+      'ignore'        : 1,
+      'exclude'       : 2,
+      'error'         : 4,
+      'err'           : 4,
+      'exclude-quiet' : 8,
+      'warn'          : 2**5,
+   } [config.blocker_action]
 
    D = DependencyTable()
+
+   def handle_blocker ( directory ):
+      blocker = directory + os.sep + "block_CC"
+
+      if not os.path.exists ( blocker ) or BLOCKER_ACTION == 1:
+         return True
+      else:
+         msg = "CC blocker found in {}".format ( directory )
+
+         if BLOCKER_ACTION == 2:
+            sys.stderr.write ( "[WARN] {} - excluding it\n".format ( msg ) )
+            return False
+         elif BLOCKER_ACTION == 4:
+            config.die ( msg + "!" )
+         elif BLOCKER_ACTION == 8:
+            return False
+         else:
+            sys.stderr.write ( "[WARN] {}\n".format ( msg ) )
+            return True
+   # --- end of handle_blocker (...) ---
 
    def file_lookup_sh ( name, basename=None ):
       """Tries to find a sh file."""
@@ -238,7 +267,10 @@ def make_dependency_table ( root, modules, config ):
 
             return False
 
-         elif D.add_new ( dir_name, directory ):
+         elif (
+            handle_blocker ( directory ) and D.add_new ( dir_name, directory )
+         ):
+
             node = D.last
 
             for fname in os.listdir ( directory ):

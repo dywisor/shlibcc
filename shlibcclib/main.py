@@ -153,6 +153,19 @@ class ShlibccConfig ( object ):
          help    = "compile for busybox\' ash",
       )
 
+      shlib_arg (
+         '--blocker',
+         dest    = "blocker_action",
+         default = "error",
+         choices = {
+            'warn', 'err', 'error', 'ignore', 'exclude', 'exclude-quiet',
+         },
+         help    = '''
+            action that will be taken when a directory with a blocker
+            file should be included
+         ''',
+      )
+
       output_arg (
          '--output', '-O',
          dest    = "output",
@@ -471,6 +484,7 @@ class ShlibccConfig ( object ):
       assert default_action in actions
       self.version_str     = __version__
       self.parser          = self.get_parser ( actions, default_action )
+      self.die             = self.parser.exit
       self.error           = self.parser.error
       self._argv_config    = self.parser.parse_args()
       self.use_bash        = self._argv_config.shell_format == 'bash'
