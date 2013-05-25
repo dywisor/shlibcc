@@ -39,6 +39,10 @@ def link ( config, all_modules ):
    if config.cat:
       shlib.pre_header = '\n'.join ( sys.stdin.readlines() )
 
+   if config.defsym_file:
+      with open ( config.defsym_file, 'rt' ) as DEFSYM_FH:
+         shlib.defsym = ''.join ( DEFSYM_FH.readlines() )
+
    # write all modules
    for module in all_modules:
       if not os.path.isdir ( module.fspath ):

@@ -226,6 +226,7 @@ class ShlibFile ( object ):
       self._modules      = dict()
       self.config        = config
       self.header        = header
+      self.defsym        = None
       self.pre_header    = None
       self.footer        = None
    # --- end of __init__ (...) ---
@@ -292,6 +293,9 @@ class ShlibFile ( object ):
       for s in iterate_str_lines ( self.header, newline_end=False ):
          yield s
 
+
+      if self.defsym:
+         yield self.defsym
 
       first_section   = True
       enclose_modules = self.config.enclose_modules

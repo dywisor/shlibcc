@@ -9,7 +9,8 @@ __all__ = [ 'make', ]
 import time
 import textwrap
 
-SHLIB_AUTHOR_NAME  = 'André Erdmann'
+#SHLIB_AUTHOR_NAME  = 'Andr\u00e9 Erdmann'
+SHLIB_AUTHOR_NAME  = 'Andre Erdmann'
 SHLIB_AUTHOR_EMAIL = 'dywi@mailerd.de'
 
 ENCODING_COMMENT   = '# -*- coding: utf-8 -*-'

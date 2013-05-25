@@ -235,6 +235,15 @@ class ShlibccConfig ( object ):
          help    = "custom header file",
       )
 
+      output_arg (
+         '--defsym', '--code-inject',
+         dest    = "defsym_file",
+         default = None,
+         metavar = "<file>",
+         type    = is_fs_file_or_none,
+         help    = "file that will included directly after the header (e.g. for variables)",
+      )
+
       # doesn't do much currently
       #  (removes the "# your script starts here!" line)
       output_arg (
