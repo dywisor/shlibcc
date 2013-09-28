@@ -3,7 +3,7 @@
 
 import distutils.core
 
-VERSION = '0.0.7'
+VERSION = '0.0.8'
 
 MY_NAME  = 'André Erdmann'
 MY_EMAIL = 'dywi@mailerd.de'
