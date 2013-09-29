@@ -17,7 +17,7 @@ distutils.core.setup (
 	author_email = MY_EMAIL,
 	license      = 'GPLv2+',
 	#url          = '',
-   scripts      = [ os.path.join ( 'bin', 'shlibcc.py' ), ] ,
+   scripts      = [ os.path.join ( 'bin', 'shlibcc' ), ] ,
 	packages     = (
       'shlibcclib',
       'shlibcclib/generic',
