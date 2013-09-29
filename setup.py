@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os.path
 import distutils.core
 
 VERSION = '0.0.8'
@@ -16,7 +17,7 @@ distutils.core.setup (
 	author_email = MY_EMAIL,
 	license      = 'GPLv2+',
 	#url          = '',
-   scripts      = [ 'shlibcc.py', ] ,
+   scripts      = [ os.path.join ( 'bin', 'shlibcc.py' ), ] ,
 	packages     = (
       'shlibcclib',
       'shlibcclib/generic',
