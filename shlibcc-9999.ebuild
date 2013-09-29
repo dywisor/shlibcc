@@ -4,12 +4,10 @@
 
 EAPI=5
 
-# python < 2.7 is not supported
-PYTHON_COMPAT="python2_7 python3_1 python3_2"
-
-inherit base python-distutils-ng git-2
-
+PYTHON_COMPAT=( python{2_7,3_2,3_3} )
 EGIT_REPO_URI="git://git.erdmann.es/dywi/${PN}.git"
+
+inherit distutils-r1 git-r3
 
 DESCRIPTION="shlib linker"
 HOMEPAGE="http://git.erdmann.es/trac/dywi_${PN}"
@@ -21,22 +19,19 @@ IUSE="tools"
 KEYWORDS=""
 
 DEPEND=""
-RDEPEND="${DEPEND:-}
+RDEPEND="${DEPEND-}
 	virtual/python-argparse
 "
 
-python_prepare_all() {
-	base_src_prepare
-}
-
 python_install_all() {
-	newbin "${PN}.py" "${PN}"
+	distutils-r1_python_install_all
+
 	if use tools; then
 		local mode
 		for mode in \
 			'link' 'deplist' 'revdep' 'depgraph' 'deptable' 'list-modules'
 		do
-			newbin "${PN}.py" "${PN}-${mode}"
+			ln -s "${PN}" "${ED}/usr/bin/${PN}-${mode}" || die "ln<tools>"
 		done
 	fi
 }
