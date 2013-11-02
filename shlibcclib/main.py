@@ -367,6 +367,14 @@ class ShlibccConfig ( object ):
       )
 
       strip_arg (
+         '--strip-main',
+         dest    = "strip_main",
+         default = False,
+         action  = "store_true",
+         help    = "also strip --main file",
+      )
+
+      strip_arg (
          '--strip-comments',
          default = False,
          action  = "store_true",

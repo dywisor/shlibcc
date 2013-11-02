@@ -25,9 +25,9 @@ class TextFileLines ( TextLines ):
 
    def __init__ ( self, fspath ):
       with open ( fspath, 'rt' ) as FH:
-         super ( TextFileLines, self ).__init__ (
-            l.rstrip() for l in FH.readlines()
-         )
+         lines = [ l.rstrip() for l in FH.readlines() ]
+
+      super ( TextFileLines, self ).__init__ ( lines )
       self.discard()
       self.discard_end()
    # --- end of __init__ (...) ---
@@ -175,7 +175,7 @@ class ShlibModule ( object ):
                yield line
       # --- end of strip_repeated_newline (...) ---
 
-      if self.name == '__main__':
+      if self.name == '__main__' and not self.config.strip_main:
          result = self._lines
       elif self.config.strip_comments:
          result = strip_comments ( self._lines )
