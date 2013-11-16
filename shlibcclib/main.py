@@ -13,10 +13,11 @@ import collections
 
 import shlibcclib.deptable
 import shlibcclib.depgraph
+import shlibcclib.deputil
 import shlibcclib.linker
 import shlibcclib.message
 
-version     = ( 0, 0, 8 )
+version     = ( 0, 0, 9 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
@@ -428,86 +429,44 @@ class ShlibccConfig ( object ):
    # --- end of get_parser (...) ---
 
    def _expand_modules ( self ):
-      def lookup_main_depfile ( SUFFIX_DEPEND='.depend' ):
-         # "inlined" code copy from deptable.py's depfile_lookup()
+
+      def lookup_main_depfile():
          main_script = self._argv_config.main_script
 
          if main_script:
-            depfile = main_script + SUFFIX_DEPEND
-
-            if os.path.isfile ( depfile ):
+            depfile = shlibcclib.deputil.locate_depfile ( main_script )
+            if depfile:
                return depfile
-
             else:
-               depfile = (
-                  os.path.splitext ( main_script )[0] + SUFFIX_DEPEND
-               )
-
-               if os.path.isfile ( depfile ):
-                  return depfile
-               else:
-                  self.parser.error ( "--depfile for --main not found." )
+               self.parser.error ( "--depfile for --main not found." )
          else:
             self.parser.error ( "--depfile without an arg requires --main" )
       # --- end of lookup_main_depfile (...) ---
 
-      def unrel ( path, DEPFILE_DIR, SHLIB_DIR_PARENT=self.shlib_dir ):
-         # lazy implementation
-         if path[:2] == '.' + os.sep or path[:3] == '..' + os.sep:
-            abspath = os.path.abspath (
-               os.path.join ( DEPFILE_DIR, path )
-            )
-
-         elif path [0] == os.sep:
-            #assert len ( path ) > 1
-            if path[1] == os.sep:
-               abspath = os.path.abspath ( path )
-            else:
-               abspath = os.path.abspath (
-                  os.path.join ( SHLIB_DIR_PARENT, path.lstrip ( os.sep ) )
-               )
-         else:
-            return path
-
-         if os.path.isdir ( abspath ):
-            raise Exception (
-               "direct depfile imports must be files, not directories."
-            )
-         else:
-            return abspath
-      # --- end of unrel (...) ---
-
       if self._argv_config.depfile:
-         depfiles_dict = collections.OrderedDict.fromkeys (
-            self._argv_config.depfile
+         unique_depfiles = collections.OrderedDict.fromkeys (
+            (
+               lookup_main_depfile() if depf is True else depf
+                  for depf in self._argv_config.depfile
+            )
+         )
+         depfiles = list ( unique_depfiles.keys() )
+         del unique_depfiles
+
+         modules, blockers = shlibcclib.deputil.read_depfiles (
+            depfiles,
+            shlibcclib.deputil.get_relpath_resolver ( self.shlib_dir )
          )
 
-         depfiles = list ( depfiles_dict.keys() )
-         modules  = collections.OrderedDict()
-
-         for _depfile in depfiles:
-            depfile     = (
-               lookup_main_depfile() if _depfile is True else _depfile
+         if blockers:
+            raise NotImplementedError (
+               "top-level blockers are TODO: {}".format ( blockers )
             )
-            depfile_dir = os.path.dirname ( depfile )
-            do_unrel    = lambda k: unrel ( k, depfile_dir )
-            deps        = None
-
-            with open ( depfile, 'rt' ) as FH:
-               deps = [ l.strip() for l in FH.readlines() ]
-
-            for key in (
-               do_unrel ( d ) for d in deps if ( d and d[0] != '#' )
-            ):
-               modules [key] = None
-         # -- end for
 
          if self._argv_config.modules:
-            self.modules = (
-               list ( self._argv_config.modules ) + list ( modules.keys() )
-            )
+            self.modules = self._argv_config.modules + modules
          else:
-            self.modules = list ( modules.keys() )
+            self.modules = modules
 
          return True
       else:

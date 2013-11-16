@@ -10,6 +10,8 @@ import os
 import sys
 
 import shlibcclib.message
+import shlibcclib.deputil
+from shlibcclib.deputil import locate_depfile, read_depfile
 
 debug_print = shlibcclib.message.debug_print
 
@@ -128,7 +130,6 @@ def make_dependency_table ( root, modules, config ):
    * modules -- modules requested by the user (module names)
    * config  -- configuration
    """
-   SUFFIX_DEPEND = '.depend'
    SUFFIX_SH     = '.sh'
    SUFFIX_BASH   = '.bash'
 
@@ -186,16 +187,6 @@ def make_dependency_table ( root, modules, config ):
          return file_lookup_sh ( name, basename=b )
    # --- end of file_lookup_bash (...) ---
 
-   def depfile_lookup ( basename, fname ):
-      """Tries to find a dependency file."""
-      if os.path.isfile ( fname + SUFFIX_DEPEND ):
-         return fname + SUFFIX_DEPEND
-      elif os.path.isfile ( basename + SUFFIX_DEPEND ):
-         return basename + SUFFIX_DEPEND
-      else:
-         return None
-   # --- end of depfile_lookup (...) ---
-
    file_lookup = file_lookup_bash if config.use_bash else file_lookup_sh
 
    def deptable_populate ( name, backtrace ):
@@ -218,7 +209,7 @@ def make_dependency_table ( root, modules, config ):
 
          elif D.add_new ( module_name, fspath ):
             node    = D.last
-            depfile = depfile_lookup ( fspath_noext, fspath )
+            depfile = locate_depfile ( fspath, fspath_noext )
 
             if depfile:
                debug_print (
@@ -227,22 +218,25 @@ def make_dependency_table ( root, modules, config ):
                   )
                )
 
-               # recursion, fetch all deps and parse them afterwards
-               with open ( depfile, 'rt' ) as FH:
-                  deps = [ l.strip() for l in FH.readlines() ]
+               # read deps, blockers
+               deps, blockers = read_depfile ( depfile )
+
+               if blockers:
+                  raise NotImplementedError (
+                     "module-level blockers are TODO: {}".format ( blockers )
+                  )
 
                for dep in deps:
-                  if dep and dep [0] != '#':
-                     if deptable_populate (
-                        name      = dep,
-                        backtrace = backtrace,
-                     ):
-                        debug_print (
-                           "module {!r}: add dep {!r}".format (
-                              module_name, dep
-                           )
+                  if deptable_populate (
+                     name      = dep,
+                     backtrace = backtrace,
+                  ):
+                     debug_print (
+                        "module {!r}: add dep {!r}".format (
+                           module_name, dep
                         )
-                        node.register_direct_dep ( dep )
+                     )
+                     node.register_direct_dep ( dep )
             else:
                debug_print (
                   "module {!r} has no dependencies.".format ( module_name )
