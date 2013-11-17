@@ -199,14 +199,8 @@ def make_dependency_table ( root, modules, config ):
    STRIP_DIR       = os.sep + '.'
    MAX_REC_DEPTH   = config.max_depth
    MODULES_EXCLUDE = config.modules_exclude
-   BLOCKER_ACTION  = {
-      'ignore'        : 1,
-      'exclude'       : 2,
-      'error'         : 4,
-      'err'           : 4,
-      'exclude-quiet' : 8,
-      'warn'          : 2**5,
-   } [config.blocker_action]
+   BLOCKER_ACTION  = config.blocker_action
+   IGNORE_BLOCKERS = BLOCKER_ACTION == BLOCKER_ACTION.ACTION_IGNORE
 
    module_blockers = ModuleBlockers (
       config.module_blockers, source='__config__'
@@ -214,23 +208,31 @@ def make_dependency_table ( root, modules, config ):
    D = DependencyTable()
 
    def handle_blocker ( directory ):
-      blocker = directory + os.sep + "block_CC"
-
-      if not os.path.exists ( blocker ) or BLOCKER_ACTION == 1:
+      if IGNORE_BLOCKERS:
          return True
       else:
-         msg = "CC blocker found in {}".format ( directory )
-
-         if BLOCKER_ACTION == 2:
-            sys.stderr.write ( "[WARN] {} - excluding it\n".format ( msg ) )
-            return False
-         elif BLOCKER_ACTION == 4:
-            config.die ( msg + "!" )
-         elif BLOCKER_ACTION == 8:
-            return False
-         else:
-            sys.stderr.write ( "[WARN] {}\n".format ( msg ) )
+         blocker = directory + os.sep + "block_CC"
+         if not os.path.exists ( blocker ):
             return True
+         else:
+            msg = "CC blocker found in {}".format ( directory )
+
+            if BLOCKER_ACTION == BLOCKER_ACTION.ACTION_EXCLUDE:
+               sys.stderr.write (
+                  "[WARN] {} - excluding it\n".format ( msg )
+               )
+               return False
+
+            elif BLOCKER_ACTION == BLOCKER_ACTION.ACTION_EXCLUDE_QUIET:
+               return False
+
+            elif BLOCKER_ACTION == BLOCKER_ACTION.ACTION_WARN:
+               sys.stderr.write ( "[WARN] {}\n".format ( msg ) )
+               return True
+
+            else:
+               config.die ( msg + "!" )
+
    # --- end of handle_blocker (...) ---
 
    def file_lookup_sh ( name, basename=None ):

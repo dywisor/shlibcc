@@ -21,6 +21,66 @@ version     = ( 0, 0, 9 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
+class BlockerAction ( object ):
+
+   ACTION_IGNORE        =  1
+   ACTION_EXCLUDE       =  2
+   ACTION_ERROR         =  4
+   ACTION_EXCLUDE_QUIET =  8
+   ACTION_WARN          = 32
+
+   ACTIONS  = {
+      'ignore'        : ACTION_IGNORE,
+      'exclude'       : ACTION_EXCLUDE,
+      'error'         : ACTION_ERROR,
+      'err'           : ACTION_ERROR,
+      'fail'          : ACTION_ERROR,
+      'exclude-quiet' : ACTION_EXCLUDE_QUIET,
+      'warn'          : ACTION_WARN,
+   }
+
+   @classmethod
+   def get_keys ( cls ):
+      return list ( cls.ACTIONS.keys() )
+
+   @classmethod
+   def from_str ( cls, s ):
+      return cls ( cls.ACTIONS[s], key=s )
+
+   def __init__ ( self, value, key=None ):
+      super ( BlockerAction, self ).__init__()
+      assert key is None or key in self.__class__.ACTIONS
+      self.key   = key
+      self.value = value
+
+   def __eq__ ( self, other ):
+      return self.value == other
+
+   def __ne__ ( self, other ):
+      return self.value != other
+
+   def __str__ ( self ):
+      if self.key is not None:
+         return str ( self.key )
+      else:
+         value = self.value
+         if value == self.ACTION_IGNORE:
+            return "ignore"
+         elif value == self.ACTION_EXCLUDE:
+            return "exclude"
+         elif value == self.ACTION_ERROR:
+            return "error"
+         elif value == self.ACTION_EXCLUDE_QUIET:
+            return "exclude-quiet"
+         elif value == self.ACTION_WARN:
+            return "warn"
+         else:
+            return "UNDEF"
+   # --- end of __str__ (...) ---
+
+# --- end of BlockerAction ---
+
+
 class ShlibccConfig ( object ):
    """The shlibcc config data structure. Also handles arg parsing."""
 
@@ -70,6 +130,17 @@ class ShlibccConfig ( object ):
             else:
                return f
       # --- end of couldbe_output_file (...) ---
+
+      def is_blocker_action ( v ):
+         if v and v in BlockerAction.ACTIONS:
+            return BlockerAction.from_str ( v )
+         else:
+            raise argparse.ArgumentTypeError (
+               "{!r} is not a blocker action".format ( v )
+            )
+      # --- end of is_blocker_action (...) ---
+
+      blocker_choices = ', '.join ( BlockerAction.get_keys() )
 
       parser = argparse.ArgumentParser (
          description = "shlib linker version " + self.version_str,
@@ -158,14 +229,26 @@ class ShlibccConfig ( object ):
       shlib_arg (
          '--blocker',
          dest    = "blocker_action",
-         default = "error",
-         choices = {
-            'warn', 'err', 'error', 'ignore', 'exclude', 'exclude-quiet',
-         },
-         help    = '''
-            action that will be taken when a directory with a blocker
-            file should be included
-         ''',
+         default = BlockerAction.from_str ( "error" ),
+         metavar = '<action>',
+         type    = is_blocker_action,
+         help    = (
+            'action that will be taken when a directory with a blocker '
+            'file should be included (choose from '
+            + blocker_choices + ') [%(default)s]'
+         )
+      )
+
+      shlib_arg (
+         '--depfile-blocker', '--main-blocker',
+         dest    = 'depfile_blocker_strategy',
+         default = BlockerAction.from_str ( "exclude" ),
+         metavar = '<action>',
+         type    = is_blocker_action,
+         help    = (
+            'control how --depfile blockers are handled '
+            '(choose from ' + blocker_choices + ') [%(default)s]'
+         )
       )
 
       output_arg (
@@ -458,7 +541,38 @@ class ShlibccConfig ( object ):
             shlibcclib.deputil.get_relpath_resolver ( self.shlib_dir )
          )
 
-         self.module_blockers = blockers
+         blocker_action = self._argv_config.depfile_blocker_strategy
+
+         if blockers:
+            blockers_str = ', '.join ( str(s) for s in blockers )
+
+            if blocker_action == blocker_action.ACTION_IGNORE:
+               sys.stderr.write (
+                  "ignoring dep blockers: {}\n".format ( blockers_str )
+               )
+
+            elif blocker_action == blocker_action.ACTION_EXCLUDE_QUIET:
+               self.modules_exclude.update ( blockers )
+
+            elif blocker_action == blocker_action.ACTION_EXCLUDE:
+               sys.stderr.write (
+                  "adding dep blockers to exclude list: {}\n".format (
+                     blockers_str
+                  )
+               )
+               self.modules_exclude.update ( blockers )
+
+            elif blocker_action == blocker_action.ACTION_WARN:
+               sys.stderr.write (
+                  "adding dep blockers to blocker list: {}\n".format (
+                     blockers_str
+                  )
+               )
+               self.module_blockers = blockers
+
+            else:
+               self.module_blockers = blockers
+         # -- end if <blockers>
 
          if self._argv_config.modules:
             self.modules = self._argv_config.modules + modules
@@ -498,13 +612,12 @@ class ShlibccConfig ( object ):
       # -- end if strip_all;
 
       self.modules_exclude = (
-         frozenset ( self._argv_config.modules_exclude )
+         set ( self._argv_config.modules_exclude )
          if hasattr ( self._argv_config, 'modules_exclude' )
-         else frozenset()
+         else set()
       )
-
       self._expand_modules()
-
+      self.modules_exclude  = frozenset ( self.modules_exclude )
       self.restrict_depends = frozenset ( self._argv_config.restrict_depends )
 
       if self.restrict_depends:
@@ -520,7 +633,10 @@ class ShlibccConfig ( object ):
    # --- end of __init__ (...) ---
 
    def __getattr__ ( self, key ):
-      return getattr ( self._argv_config, key )
+      if key != '_argv_config':
+         return getattr ( self._argv_config, key )
+      else:
+         raise AttributeError ( key )
    # --- end of __getattr__ (...) ---
 
 # --- end of ShlibccConfig ---
