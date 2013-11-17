@@ -458,10 +458,7 @@ class ShlibccConfig ( object ):
             shlibcclib.deputil.get_relpath_resolver ( self.shlib_dir )
          )
 
-         if blockers:
-            raise NotImplementedError (
-               "top-level blockers are TODO: {}".format ( blockers )
-            )
+         self.module_blockers = blockers
 
          if self._argv_config.modules:
             self.modules = self._argv_config.modules + modules

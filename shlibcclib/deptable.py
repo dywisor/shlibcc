@@ -15,7 +15,11 @@ from shlibcclib.deputil import locate_depfile, read_depfile
 
 debug_print = shlibcclib.message.debug_print
 
-class MaxRecursionDepthReached ( Exception ):
+
+class DependencyTableException ( Exception ):
+   pass
+
+class MaxRecursionDepthReached ( DependencyTableException ):
 
    def __init__ ( self, N, backtrace, name ):
       super ( MaxRecursionDepthReached, self ).__init__ (
@@ -29,6 +33,61 @@ class MaxRecursionDepthReached ( Exception ):
    # --- end of __init__ (...) ---
 
 # --- end of MaxRecursionDepthReached ---
+
+
+class ModuleBlockers ( object ):
+
+   def __init__ ( self, module_blockers=None, source=None ):
+      super ( ModuleBlockers, self ).__init__()
+      self._blockers_dict = {}
+      if module_blockers:
+         self.extend ( module_blockers, source )
+   # --- end of __init__ (...) ---
+
+   def extend ( self, blockers, source=None ):
+      blockers_dict = self._blockers_dict
+      if source is None:
+         for name in blockers:
+            if name not in blockers_dict:
+               blockers_dict [name] = set()
+      else:
+         for name in blockers:
+            if name in blockers_dict:
+               blockers_dict [name].add ( source )
+            else:
+               blockers_dict [name] = { source, }
+   # --- end of extend (...) ---
+
+   def iter_intersection ( self, names ):
+      blockers_dict = self._blockers_dict
+      for name in names:
+         entry = blockers_dict.get ( name, None )
+         if entry is not None:
+            yield ( name, entry )
+   # --- end of iter_intersection (...) ---
+
+   def intersection ( self, names ):
+      return dict ( self.iter_intersection ( names ) )
+   # --- end of intersection (...) ---
+
+   def __and__ ( self, other ):
+      if hasattr ( other, 'get_names' ):
+         return self.intersection ( other.get_names() )
+      elif hasattr ( other, '__iter__' ):
+         return self.intersection ( other )
+      else:
+         return NotImplemented
+   # --- end of __and__ (...) ---
+
+   def __str__ ( self ):
+      return "{cls.__name__}({blockers})".format (
+         cls=self.__class__,
+         blockers=', '.join ( repr(k) for k in self._blockers_dict.keys() )
+      )
+   # --- end of __str__ (...) ---
+
+# --- end of ModuleBlockers ---
+
 
 class DependencyTable ( object ):
    """A DependencyTable lists all modules and their direct dependencies."""
@@ -85,6 +144,10 @@ class DependencyTable ( object ):
    def names ( self ):
       return self._table.keys()
    # --- end of names (...) ---
+
+   def get_names ( self ):
+      return list ( self._table.keys() )
+   # --- end of get_names (...) ---
 
    def __iter__ ( self ):
       """Iterator that yields all modules."""
@@ -145,6 +208,9 @@ def make_dependency_table ( root, modules, config ):
       'warn'          : 2**5,
    } [config.blocker_action]
 
+   module_blockers = ModuleBlockers (
+      config.module_blockers, source='__config__'
+   )
    D = DependencyTable()
 
    def handle_blocker ( directory ):
@@ -222,9 +288,7 @@ def make_dependency_table ( root, modules, config ):
                deps, blockers = read_depfile ( depfile )
 
                if blockers:
-                  raise NotImplementedError (
-                     "module-level blockers are TODO: {}".format ( blockers )
-                  )
+                  module_blockers.extend ( blockers, source=module_name )
 
                for dep in deps:
                   if deptable_populate (
@@ -338,7 +402,7 @@ def make_dependency_table ( root, modules, config ):
                backtrace    = backtrace
             )
          else:
-            raise Exception (
+            raise DependencyTableException (
                "no such module: {}; backtrace : {}".format (
                   name,
                   ' -> '.join ( backtrace ) if backtrace else '<none>'
@@ -349,6 +413,20 @@ def make_dependency_table ( root, modules, config ):
 
    for module in modules:
       deptable_populate ( module, [] )
+
+   blocked_modules = module_blockers & D
+   if blocked_modules:
+      HLINE = 79*'='
+      sys.stderr.write (
+         HLINE + "\nunsatisfiable module dependencies:\n"
+         + '\n'.join (
+            "* {module} blocked by {blockers}".format (
+               module=k, blockers=', '.join ( repr(x) for x in v )
+            ) for k, v in sorted ( blocked_modules.items() )
+         )
+         + '\n' + HLINE + '\n'
+      )
+      raise DependencyTableException ( "cannot create dependency table" )
 
    return D
 # --- end of make_dependency_table (...) ---
