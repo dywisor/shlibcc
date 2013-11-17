@@ -471,8 +471,10 @@ class ShlibccConfig ( object ):
    # --- end of _expand_modules (...) ---
 
    def __init__ ( self, actions, default_action ):
+      super ( ShlibccConfig, self ).__init__()
       assert default_action in actions
       self.version_str     = __version__
+      self.module_blockers = None
       self.parser          = self.get_parser ( actions, default_action )
       self.die             = self.parser.exit
       self.error           = self.parser.error
