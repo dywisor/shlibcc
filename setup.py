@@ -4,7 +4,7 @@
 import os.path
 import distutils.core
 
-VERSION = '0.0.8'
+VERSION = '0.0.11'
 
 MY_NAME  = 'André Erdmann'
 MY_EMAIL = 'dywi@mailerd.de'

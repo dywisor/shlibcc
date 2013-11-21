@@ -16,8 +16,9 @@ import shlibcclib.depgraph
 import shlibcclib.deputil
 import shlibcclib.linker
 import shlibcclib.message
+import shlibcclib.shlib
 
-version     = ( 0, 0, 10 )
+version     = ( 0, 0, 11 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
@@ -139,6 +140,45 @@ class ShlibccConfig ( object ):
                "{!r} is not a blocker action".format ( v )
             )
       # --- end of is_blocker_action (...) ---
+
+      def is_module_section_restriction ( v ):
+         if v is None:
+            return None
+         if not v:
+            return set()
+         else:
+            get_section_name = shlibcclib.shlib.ShlibModule.get_section_name
+            whitelist = set()
+            blacklist = set()
+            add_section = None
+
+            for vname in v.split ( ',' ):
+               if vname:
+                  if vname[0] == '-':
+                     name        = vname[1:]
+                     add_section = blacklist.add
+                  else:
+                     name        = vname
+                     add_section = whitelist.add
+
+                  try:
+                     section = get_section_name ( name )
+                  except shlibcclib.shlib.ShlibModuleSyntaxError:
+                     raise argparse.ArgumentTypeError (
+                        "{!r} is not a known module section".format ( vname )
+                     )
+                  else:
+                     add_section ( section )
+            # -- end for
+
+            if blacklist:
+               _whitelist = (
+                  whitelist or  shlibcclib.shlib.ShlibModule.SECTIONS
+               )
+               return set (( k for k in _whitelist if k not in blacklist ))
+            else:
+               return whitelist
+      # --- end of is_module_section_restriction (...) ---
 
       blocker_choices = ', '.join ( BlockerAction.get_keys() )
 
@@ -297,6 +337,14 @@ class ShlibccConfig ( object ):
          action  = "append",
          help    = "module dependencies to ignore",
          metavar = "<module>",
+      )
+
+      output_arg (
+         '--extract-sections', '--restrict-sections', '-X',
+         dest    = 'restrict_sections',
+         default = None,
+         type    = is_module_section_restriction,
+         help    = 'comma-separated list of sections to extract',
       )
 
       output_arg (
@@ -481,6 +529,19 @@ class ShlibccConfig ( object ):
       )
 
       strip_arg (
+         '--keep-safety-checks',
+         dest    = 'keep_safety_checks',
+         default = 'comment',
+         nargs   = '?',
+         choices = [ "comment", "c", "no", "n", "y", "yes" ],
+         const   = 'yes',
+         metavar = '<y|c|n>',
+         help    = (
+            "whether to keep @safety_checks as as code(y), comment(c) or not(n)"
+         )
+      )
+
+      strip_arg (
          '--no-enclose-modules',
          dest    = "enclose_modules",
          default = argparse.SUPPRESS,
@@ -599,13 +660,26 @@ class ShlibccConfig ( object ):
       if self._argv_config.shell_opts:
          self.shell_opts = self._argv_config.shell_opts.lstrip ( '-' )
 
+      if self._argv_config.keep_safety_checks in { 'y', 'yes' }:
+         self.keep_safety_checks = 'y'
+      elif self._argv_config.keep_safety_checks in { 'c', 'comment' }:
+         self.keep_safety_checks = 'c'
+      elif self._argv_config.keep_safety_checks in { 'n', 'no' }:
+         self.keep_safety_checks = 'n'
+      else:
+         raise AssertionError (
+            "unknown keep_safety_checks value {!r}.".format (
+               self._argv_config.keep_safety_checks
+            )
+         )
+
 
       if self._argv_config.strip_all:
          self.strip_comments     = True
          self.strip_virtual      = True
          self.strip_dev_comments = True
          self.enclose_modules    = False
-      elif not hasattr ( self._argv_config, 'enclose_module' ):
+      elif not hasattr ( self._argv_config, 'enclose_modules' ):
          self.enclose_modules = bool (
             self._argv_config.is_lib or not self._argv_config.main_script
          )
