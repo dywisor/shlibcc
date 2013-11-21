@@ -160,6 +160,7 @@ class ShlibModule ( object ):
       #'modvars'            : 'module_init_vars',
       'module_features'    : 'module_init_vars',
       'init'               : 'module_init',
+      'main'               : 'default',
    }
 
    @classmethod
