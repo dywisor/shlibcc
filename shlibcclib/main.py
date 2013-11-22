@@ -154,7 +154,7 @@ class ShlibccConfig ( object ):
 
             for vname in v.split ( ',' ):
                if vname:
-                  if vname[0] == '-':
+                  if vname[0] in "!^-":
                      name        = vname[1:]
                      add_section = blacklist.add
                   else:

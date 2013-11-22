@@ -7,6 +7,12 @@
 import collections
 import re
 
+
+def get_dict_keys_with_value ( d, values ):
+   return [ k for k, v in d.items() if v in values ]
+
+
+
 class ShlibModuleException ( Exception ):
    pass
 
@@ -163,6 +169,12 @@ class ShlibModule ( object ):
       'main'               : 'default',
    }
 
+   SECTION_KEYWORDS  = [ 'header', 'license' ]
+   SECTION_KEYWORDS += get_dict_keys_with_value (
+      SECTION_ALIASES, SECTION_KEYWORDS
+   )
+
+
    @classmethod
    def get_section_name (
       cls, name, _SECTIONS=SECTIONS, _ALIAS=SECTION_ALIASES
@@ -278,12 +290,13 @@ class ShlibModule ( object ):
          return list ( strip_repeated_newline ( retgen ) )
       # --- end of strip_lines (...) ---
 
-      keep_safety_checks = self.config.keep_safety_checks
-
-      sections = { k: [] for k in self.SECTIONS }
-      section = 'default'
-      add_line_to_section = sections[section].append
+      keep_safety_checks   = self.config.keep_safety_checks
+      section_keywords     = self.SECTION_KEYWORDS
       discard_virtual_line = lambda x: None
+
+      sections             = { k: [] for k in self.SECTIONS }
+      section              = 'default'
+      add_line_to_section  = sections[section].append
 
       for line in self._lines:
          sline = line.strip()
@@ -305,6 +318,11 @@ class ShlibModule ( object ):
                      add_line_to_section = discard_virtual_line
                   else:
                      add_line_to_section = sections[section].append
+
+               elif keyword in section_keywords:
+                  add_line_to_section = sections[keyword].append
+                  if arg:
+                     add_line_to_section ( '# ' + arg )
 
                elif keyword in { 'double_tap', 'safety_check' }:
                   if keep_safety_checks == 'c':
