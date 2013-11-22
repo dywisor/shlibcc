@@ -4,6 +4,109 @@
 # Distributed under the terms of the GNU General Public License;
 # either version 2 of the License, or (at your option) any later version.
 
+def get_max_colsize ( *tables ):
+   if not tables:
+      return None
+
+   try:
+      max_colsizes = len ( tables[0][0] ) * [0]
+   except IndexError:
+      max_colsizes = []
+
+   for rows in tables:
+      for row in rows:
+         for i, col in enumerate ( row ):
+            try:
+               current_max = max_colsizes[i]
+            except IndexError:
+               # resize
+               max_colsizes.append ( 0 )
+               current_max = 0
+            # -- end try
+
+            max_colsizes[i] = max ( current_max, len ( col ) )
+         # -- end for
+      # -- end for
+   # -- end for
+
+   return max_colsizes
+# --- end of get_max_colsize (...) ---
+
+def format_table (
+   row_data, header=None, join_str=' ',
+   postheader_fillchar='-', header_join_str=None
+):
+   get_coljust_len = lambda col, csize: (len(col)+csize+1)//2
+
+   #rows = [ str(d) for d in row_data ]
+   if isinstance ( row_data, list ):
+      rows = row_data
+   else:
+      rows = list ( row_data )
+
+   if rows:
+      my_data_join_str = join_str
+
+      if header and any ( header ):
+         if header_join_str is None:
+            sepa_len           = len ( join_str )
+            my_header_join_str = join_str
+
+         else:
+            header_j_len       = len ( header_join_str )
+            j_len              = len ( join_str )
+            sepa_len           = header_j_len
+            my_header_join_str = header_join_str
+
+            if header_j_len < j_len:
+               my_header_join_str = header_join_str.center ( j_len )
+               sepa_len           = j_len
+            elif header_j_len > j_len:
+               my_data_join_str = join_str.center ( header_j_len )
+
+            del header_j_len, j_len
+         # -- end if
+
+         colsize     = get_max_colsize ( header, rows )
+         last_col    = len ( colsize ) - 1
+         table_width = sum ( colsize ) + sepa_len
+
+         dojoin = my_header_join_str.join
+         for row in header:
+            yield dojoin (
+               (
+                  col.center ( colsize[i] ) if i < last_col
+                     else col.rjust ( get_coljust_len ( col, colsize[i] ) )
+               ) for i, col in enumerate ( row )
+            )
+
+            if postheader_fillchar:
+               yield table_width * postheader_fillchar
+         # -- end for
+         del dojoin
+
+      else:
+         colsize          = get_max_colsize ( rows )
+         last_row         = len ( colsize ) - 1
+         my_data_join_str = join_str
+         #table_width = sum ( colsize ) + len ( join_str )
+
+
+      dojoin = my_data_join_str.join
+      for row in rows:
+         yield dojoin (
+            ( col.ljust ( colsize[i] ) if i < last_col else col )
+            for i, col in enumerate ( row )
+         )
+   # -- end if rows
+# --- end of format_table (...) ---
+
+def swap_pairs ( iterable ):
+   for a, b in iterable:
+      yield ( b, a )
+# --- end of swap_pairs (...) ---
+
+
 class Node ( object ):
 
    def __init__ ( self, name, data ):
@@ -189,29 +292,37 @@ class DirectedGraph ( object ):
       return False
    # --- end of has_edges (...) ---
 
-   def visualize_edges ( self, reverse=False ):
-      def gen_edges_str():
-         for node in self._nodes.values():
-            node_str = str ( node )
-            for dest_node in node.get_nodes():
-               yield "{src} ==> {dest}".format (
-                  src  = node_str,
-                  dest = str ( dest_node )
-               )
-      # --- end of gen_edges_str (...) ---
+   def iter_edges ( self ):
+      for node in self._nodes.values():
+         node_str = str ( node )
+         for dest_node in node.get_nodes():
+            yield ( node_str, str ( dest_node ) )
+   # --- end of iter_edges (...) ---
 
-      def gen_reverse_edges_str():
-         for node in self._nodes.values():
-            node_str = str ( node )
-            for src_node in node.get_reverse_nodes():
-               yield "{dest} <== {src}".format (
-                  src  = str ( src_node ),
-                  dest = node_str
-               )
+   def iter_reverse_edges ( self ):
+      for node in self._nodes.values():
+         node_str = str ( node )
+         for src_node in node.get_reverse_nodes():
+            yield ( str ( src_node ), node_str )
+   # --- end of iter_reverse_edges (...) ---
 
-      return '\n'.join (
-         gen_reverse_edges_str() if reverse else gen_edges_str()
-      )
+   def visualize_edges ( self, reverse=False, pretty_print=True ):
+      if reverse:
+         iter_edges = swap_pairs ( self.iter_reverse_edges() )
+         join_str   = ' <== '
+         header     = [( '<module>', '<required by>' )]
+      else:
+         iter_edges = self.iter_edges()
+         join_str   = ' ==> '
+         header     = [( '<module>', '<depends on>' )]
+
+      if pretty_print:
+         return '\n'.join ( format_table (
+            sorted ( iter_edges, key=lambda k: ( k[0].count('/'), k[0] ) ),
+            header, join_str
+         ) )
+      else:
+         return '\n'.join ( join_str.join ( k ) for k in iter_edges )
    # --- end of visualize_edges (...) ---
 
    def toposort_kahn ( self ):
