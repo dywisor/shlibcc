@@ -274,6 +274,34 @@ class ShlibModule ( object ):
                yield line
       # --- end of strip_repeated_newline (...) ---
 
+      def get_debug_commands ( type_keyword, arg, sline ):
+         if debug_type in { 'echo', 'print', 'stdout' }:
+            if arg:
+               return [ "echo \"{}\"".format ( arg ) ]
+            else:
+               return [ "echo" ]
+
+         elif debug_type in { 'stderr', }:
+            if arg:
+               return [ "echo \"{}\" 1>&2".format ( arg ) ]
+            else:
+               return [ "echo 1>&2" ]
+         elif debug_type in { 'warn', 'error' }:
+            if arg:
+               return [
+                  "echo \"{}: {}\" 1>&2".format ( debug_type.upper(), arg )
+               ]
+            else:
+               return [ "echo 1>&2" ]
+
+         else:
+            raise ShlibModuleSyntaxError (
+               "unknown @debug_<type> statement {!r}".format (
+                  sline
+               )
+            )
+      # --- end of get_debug_commands (...) ---
+
       def strip_lines ( lines, section ):
          if not lines:
             return None
@@ -291,8 +319,12 @@ class ShlibModule ( object ):
       # --- end of strip_lines (...) ---
 
       keep_safety_checks   = self.config.keep_safety_checks
+      enable_debug_code    = self.config.enable_debug_code
       section_keywords     = self.SECTION_KEYWORDS
       discard_virtual_line = lambda x: None
+      reindent_line        = lambda line, arg: (
+         ( line.partition('#')[0] + arg ) if arg else ""
+      )
 
       sections             = { k: [] for k in self.SECTIONS }
       section              = 'default'
@@ -327,13 +359,25 @@ class ShlibModule ( object ):
                elif keyword in { 'double_tap', 'safety_check' }:
                   if keep_safety_checks == 'c':
                      add_line_to_section ( line )
-                  elif keep_safety_checks == 'n':
-                     pass
-                  elif arg:
-                     indent_whitespace, sepa, rem = line.partition ( '#' )
-                     add_line_to_section ( indent_whitespace + arg )
-                  else:
-                     add_line_to_section ( "" )
+                  elif keep_safety_checks == 'y':
+                     add_line_to_section ( reindent_line ( line, arg ) )
+
+               elif keyword == 'debug':
+                  if enable_debug_code == 'c':
+                     add_line_to_section ( line )
+                  elif enable_debug_code == 'y':
+                     add_line_to_section ( reindent_line ( line, arg ) )
+
+               elif keyword[:6] == 'debug_':
+                  if enable_debug_code == 'c':
+                     add_line_to_section ( line )
+                  elif enable_debug_code == 'y':
+                     debug_type  = keyword[6:]
+                     for dbg_arg in get_debug_commands (
+                        debug_type, arg, sline
+                     ):
+                        add_line_to_section ( reindent_line ( line, dbg_arg ) )
+                   # -- end if <enable_debug_code>
                else:
                   add_line_to_section ( line )
 

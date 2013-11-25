@@ -18,7 +18,7 @@ import shlibcclib.linker
 import shlibcclib.message
 import shlibcclib.shlib
 
-version     = ( 0, 0, 11 )
+version     = ( 0, 0, 12 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
@@ -180,7 +180,8 @@ class ShlibccConfig ( object ):
                return whitelist
       # --- end of is_module_section_restriction (...) ---
 
-      blocker_choices = ', '.join ( BlockerAction.get_keys() )
+      blocker_choices       = ', '.join ( BlockerAction.get_keys() )
+      optional_code_choices = ( "comment", "c", "no", "n", "y", "yes" )
 
       parser = argparse.ArgumentParser (
          description = "shlib linker version " + self.version_str,
@@ -340,8 +341,9 @@ class ShlibccConfig ( object ):
       )
 
       output_arg (
-         '--extract-sections', '--restrict-sections', '-X',
+         '--extract-sections', '-X',
          dest    = 'restrict_sections',
+         metavar = '<section,...>',
          default = None,
          type    = is_module_section_restriction,
          help    = 'comma-separated list of sections to extract',
@@ -413,6 +415,32 @@ class ShlibccConfig ( object ):
          action = "store_const",
          const  = "u",
          help   = "same as --shell-opts u",
+      )
+
+      output_arg (
+         '--keep-safety-checks',
+         dest    = 'keep_safety_checks',
+         default = 'comment',
+         nargs   = '?',
+         choices = optional_code_choices,
+         const   = 'yes',
+         metavar = '<y|c|n>',
+         help    = (
+            "whether to keep @safety_checks as code(y), comment(c) or not(n)"
+         )
+      )
+
+      output_arg (
+         '--enable-debug-code',
+         dest    = 'enable_debug_code',
+         default = 'no',
+         nargs   = '?',
+         choices = optional_code_choices,
+         const   = 'yes',
+         metavar = '<y|c<n>',
+         help    = (
+            "whether to keep @debug commands as code(y), comment(c) or not(n)"
+         )
       )
 
       arg (
@@ -526,19 +554,6 @@ class ShlibccConfig ( object ):
          default = True,
          action  = "store_false",
          help    = "keep dev notes",
-      )
-
-      strip_arg (
-         '--keep-safety-checks',
-         dest    = 'keep_safety_checks',
-         default = 'comment',
-         nargs   = '?',
-         choices = [ "comment", "c", "no", "n", "y", "yes" ],
-         const   = 'yes',
-         metavar = '<y|c|n>',
-         help    = (
-            "whether to keep @safety_checks as as code(y), comment(c) or not(n)"
-         )
       )
 
       strip_arg (
@@ -660,19 +675,21 @@ class ShlibccConfig ( object ):
       if self._argv_config.shell_opts:
          self.shell_opts = self._argv_config.shell_opts.lstrip ( '-' )
 
-      if self._argv_config.keep_safety_checks in { 'y', 'yes' }:
-         self.keep_safety_checks = 'y'
-      elif self._argv_config.keep_safety_checks in { 'c', 'comment' }:
-         self.keep_safety_checks = 'c'
-      elif self._argv_config.keep_safety_checks in { 'n', 'no' }:
-         self.keep_safety_checks = 'n'
-      else:
-         raise AssertionError (
-            "unknown keep_safety_checks value {!r}.".format (
-               self._argv_config.keep_safety_checks
+      for attr_name in { 'keep_safety_checks', 'enable_debug_code' }:
+         attr = getattr ( self._argv_config, attr_name )
+         if attr in { 'y', 'yes' }:
+            attr = 'y'
+         elif attr in { 'c', 'comment' }:
+            attr = 'c'
+         elif attr in { 'n', 'no' }:
+            attr = 'n'
+         else:
+            raise AssertionError (
+               "unknown {!s} value {!r}".format ( attr_name, attr )
             )
-         )
-
+         setattr ( self, attr_name, attr )
+         # -- end if <attr>
+      # -- end for <attr_name>
 
       if self._argv_config.strip_all:
          self.strip_comments     = True
