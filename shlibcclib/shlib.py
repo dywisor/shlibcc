@@ -306,7 +306,7 @@ class ShlibModule ( object ):
          def iter_varnames():
             if arg:
                for varname in arg.split():
-                  if varname[0] == '$':
+                  if varname[0] == '$' and len ( varname ) > 1:
                      raise ShlibModuleSyntaxError (
                         "@VARCHECK: invalid varname {!r}".format ( varname )
                      )
@@ -318,11 +318,11 @@ class ShlibModule ( object ):
 
          if empty_ok:
             for varname in iter_varnames():
-               yield ": ${" + varname + "?}"
+               yield ": \"${" + varname + "?}\""
                have_any_varname = True
          else:
             for varname in iter_varnames():
-               yield ": ${" + varname + ":?}"
+               yield ": \"${" + varname + ":?}\""
                have_any_varname = True
 
          if have_any_varname:
