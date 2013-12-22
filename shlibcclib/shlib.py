@@ -302,6 +302,34 @@ class ShlibModule ( object ):
             )
       # --- end of get_debug_commands (...) ---
 
+      def gen_varcheck_lines ( arg, empty_ok ):
+         def iter_varnames():
+            if arg:
+               for varname in arg.split():
+                  if varname[0] == '$':
+                     raise ShlibModuleSyntaxError (
+                        "@VARCHECK: invalid varname {!r}".format ( varname )
+                     )
+                  else:
+                     yield varname
+         # --- end of iter_varnames (...) ---
+
+         have_any_varname = False
+
+         if empty_ok:
+            for varname in iter_varnames():
+               yield ": ${" + varname + "?}"
+               have_any_varname = True
+         else:
+            for varname in iter_varnames():
+               yield ": ${" + varname + ":?}"
+               have_any_varname = True
+
+         if have_any_varname:
+            # empty line after @varcheck
+            yield None
+      # --- end of gen_varcheck_lines (...) ---
+
       def strip_lines ( lines, section ):
          if not lines:
             return None
@@ -329,6 +357,8 @@ class ShlibModule ( object ):
       sections             = { k: [] for k in self.SECTIONS }
       section              = 'default'
       add_line_to_section  = sections[section].append
+
+      # TODO: create a parser class
 
       for line in self._lines:
          sline = line.strip()
@@ -361,6 +391,24 @@ class ShlibModule ( object ):
                      add_line_to_section ( line )
                   elif keep_safety_checks == 'y':
                      add_line_to_section ( reindent_line ( line, arg ) )
+
+               elif keyword in { 'varcheck', 'vcheck' }:
+                  if keep_safety_checks == 'c':
+                     add_line_to_section ( line )
+                  elif keep_safety_checks == 'y':
+                     for varcheck_line in gen_varcheck_lines ( arg, False ):
+                        add_line_to_section (
+                           reindent_line ( line, varcheck_line )
+                        )
+
+               elif keyword in { 'varcheck_emptyok', 'vchecke' }:
+                  if keep_safety_checks == 'c':
+                     add_line_to_section ( line )
+                  elif keep_safety_checks == 'y':
+                     for varcheck_line in gen_varcheck_lines ( arg, True ):
+                        add_line_to_section (
+                           reindent_line ( line, varcheck_line )
+                        )
 
                elif keyword == 'debug':
                   if enable_debug_code == 'c':

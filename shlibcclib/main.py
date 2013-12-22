@@ -18,7 +18,7 @@ import shlibcclib.linker
 import shlibcclib.message
 import shlibcclib.shlib
 
-version     = ( 0, 0, 12 )
+version     = ( 0, 0, 13 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
