@@ -6,6 +6,7 @@
 
 import collections
 import re
+import os.path
 
 
 def get_dict_keys_with_value ( d, values ):
@@ -555,6 +556,11 @@ class ShlibFile ( object ):
 
          for m in modules:
             _str = m.to_str ( section )
+            if not m.name or m.name[0] != os.path.sep:
+               m_name = m.name
+            else:
+               m_name = "<" + os.path.basename ( m.name ) + ">"
+
             if _str:
                if section_empty:
                   if first_section:
@@ -571,20 +577,20 @@ class ShlibFile ( object ):
                yield EMPTY_STR
                if section == 'default':
                   if enclose_modules:
-                     yield "### begin module {} ###".format ( m.name )
+                     yield "### begin module {} ###".format ( m_name )
                      yield EMPTY_STR
                      yield _str
                      yield EMPTY_STR
-                     yield "### end module {} ###".format ( m.name )
+                     yield "### end module {} ###".format ( m_name )
                   else:
                      yield _str
 
                elif section == 'license':
-                  yield "### license for " + m.name
+                  yield "### license for " + m_name
                   yield _str
 
                else:
-                  yield "### module " + m.name
+                  yield "### module " + m_name
                   if _str[0] == '#':
                      yield EMPTY_STR
                   yield _str
