@@ -586,6 +586,22 @@ class ShlibccConfig ( object ):
          '''
       )
 
+      strip_arg (
+         '--no-enclose-sections',
+         dest    = "enclose_sections",
+         default = argparse.SUPPRESS,
+         action  = "store_false",
+         help    = "don\'t print section begin/end lines"
+      )
+
+      strip_arg (
+         '--enclose-sections',
+         dest    = "enclose_sections",
+         default = argparse.SUPPRESS,
+         action  = "store_true",
+         help    = "print section begin/end lines"
+      )
+
       dep_arg (
          '--depends', '-d',
          dest    = "restrict_depends",
@@ -710,11 +726,15 @@ class ShlibccConfig ( object ):
          self.strip_virtual      = True
          self.strip_dev_comments = True
          self.enclose_modules    = False
-      elif not hasattr ( self._argv_config, 'enclose_modules' ):
-         self.enclose_modules = bool (
-            self._argv_config.is_lib or not self._argv_config.main_script
-         )
+      else:
+         if not hasattr ( self._argv_config, 'enclose_modules' ):
+            self.enclose_modules = bool (
+               self._argv_config.is_lib or not self._argv_config.main_script
+            )
       # -- end if strip_all;
+
+      if not hasattr ( self._argv_config, 'enclose_sections' ):
+         self.enclose_sections = bool ( self.restrict_sections is not None )
 
       self.modules_exclude = (
          set ( self._argv_config.modules_exclude )

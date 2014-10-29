@@ -539,8 +539,9 @@ class ShlibFile ( object ):
       if self.defsym:
          yield self.defsym
 
-      first_section   = True
-      enclose_modules = self.config.enclose_modules
+      first_section    = True
+      enclose_modules  = self.config.enclose_modules
+      enclose_sections = self.config.enclose_sections
 
       if self.config.restrict_sections is not None:
          want_sections = [
@@ -568,7 +569,7 @@ class ShlibFile ( object ):
                   else:
                      yield EMPTY_STR
 
-                  if section != 'default':
+                  if enclose_sections and section != 'default':
                      yield "##### begin section {} #####".format ( section )
 
                   section_empty = False
@@ -598,7 +599,7 @@ class ShlibFile ( object ):
 
          if not section_empty:
             #yield EMPTY_STR
-            if section != 'default':
+            if enclose_sections and section != 'default':
                yield EMPTY_STR
                yield "##### end section {} #####".format ( section )
 
