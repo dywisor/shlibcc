@@ -12,13 +12,14 @@ import argparse
 import collections
 
 import shlibcclib.deptable
+import shlibcclib.library
 import shlibcclib.depgraph
 import shlibcclib.deputil
 import shlibcclib.linker
 import shlibcclib.message
 import shlibcclib.shlib
 
-version     = ( 0, 0, 13 )
+version     = ( 0, 0, 14 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
 
@@ -233,6 +234,16 @@ class ShlibccConfig ( object ):
          metavar = "<dir>",
          type    = is_fs_dir,
          help    = "shlib root directory",
+      )
+
+      shlib_arg (
+         '--shlib-include-dir', '-I',
+         dest    = "shlib_include_dirs",
+         action  = 'append',
+         default = [],
+         metavar = "<dir>",
+         type    = is_fs_dir,
+         help    = "additional shlib root directories",
       )
 
       shlib_arg (
@@ -671,6 +682,9 @@ class ShlibccConfig ( object ):
       self._argv_config    = self.parser.parse_args()
       self.use_bash        = self._argv_config.shell_format == 'bash'
       self.use_stdout      = self._argv_config.output == '-'
+      self.shlib_path      = (
+         [ self.shlib_dir ] + list ( reversed ( self.shlib_include_dirs ) )
+      )
 
       if self._argv_config.shell_opts:
          self.shell_opts = self._argv_config.shell_opts.lstrip ( '-' )
@@ -756,8 +770,8 @@ def main ( default_action ):
    )
 
    # deptable is always required
-   deptable = shlibcclib.deptable.make_dependency_table (
-      root     = config.shlib_dir,
+   deptable = shlibcclib.library.make_dependency_table (
+      rootdirs = config.shlib_path,
       modules  = config.modules,
       config   = config,
    )
