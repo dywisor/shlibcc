@@ -22,6 +22,8 @@ import shlibcclib.shlib
 version     = ( 0, 0, 14 )
 __version__ = '.'.join ( str ( a ) for a in version )
 
+DEFAULT_SHLIB_DIR = None
+
 
 class BlockerAction ( object ):
 
@@ -230,7 +232,7 @@ class ShlibccConfig ( object ):
       shlib_arg (
          '--shlib-dir', '-S',
          dest    = "shlib_dir",
-         default = os.getcwd(),
+         default = DEFAULT_SHLIB_DIR or os.getcwd(),
          metavar = "<dir>",
          type    = is_fs_dir,
          help    = "shlib root directory",
