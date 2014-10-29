@@ -465,7 +465,7 @@ class ShlibccConfig ( object ):
       arg (
          '--stable-sort',
          dest    = "stable_sort",
-         default = False,
+         default = True,
          action  = "store_true",
          help    = "use stable sorting",
       )
