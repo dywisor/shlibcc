@@ -249,6 +249,15 @@ class ShlibccConfig ( object ):
       )
 
       shlib_arg (
+         '--dropin',
+         dest    = "dropin_modules",
+         action  = 'store_true',
+         default = False,
+         # default behavior is downward search
+         help    = "always search modules in all libraries"
+      )
+
+      shlib_arg (
          '--shell',
          default ='sh',
          choices = frozenset ( { 'sh', 'ash', 'bash' } ),

@@ -211,7 +211,7 @@ class ModuleLibrary ( object ):
          self.config.die ( msg + "!" )
    # --- end of handle_blocker (...) ---
 
-   def populate_deptable ( self, modules ):
+   def populate_deptable ( self, modules, dropin_modules ):
       MODULE_DIRECTORIES = self.module_directories
       MAXDEPTH           = self.max_search_depth
       MODULES_EXCLUDE    = self.modules_exclude
@@ -385,6 +385,9 @@ class ModuleLibrary ( object ):
          module_path     = module_info[2]
          module_key      = module_dir.get_relpath ( module_basepath )
 
+         if dropin_modules:
+            offset = 0
+
          if module_type is None:
             return populate_deptable_from_directory (
                backtrace + [ module_key ],
@@ -450,6 +453,6 @@ def make_dependency_table ( rootdirs, modules, config ):
    """
 
    module_library = ModuleLibrary ( config, rootdirs )
-   module_library.populate_deptable ( modules )
+   module_library.populate_deptable ( modules, config.dropin_modules )
    return module_library.deptable
 # --- end of make_dependency_table (...) ---
