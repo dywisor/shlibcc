@@ -130,6 +130,11 @@ class ModuleRootDirectory ( object ):
             yield ( ftype, basepath, fpath )
    # --- end of ilocate_file (...) ---
 
+   def __repr__ ( self ):
+      return '{cls.__name__}({fspath!r})'.format (
+         cls=self.__class__, fspath=self.fspath
+      )
+
 class ModuleRootDirectories ( object ):
 
    FTYPE_SH   = '.sh'

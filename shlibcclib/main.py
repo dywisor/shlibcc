@@ -711,7 +711,7 @@ class ShlibccConfig ( object ):
       self.use_bash        = self._argv_config.shell_format == 'bash'
       self.use_stdout      = self._argv_config.output == '-'
       self.shlib_path      = (
-         [ self.shlib_dir ] + list ( reversed ( self.shlib_include_dirs ) )
+         list ( reversed ( self.shlib_include_dirs ) ) + [ self.shlib_dir ]
       )
 
       if self._argv_config.shell_opts:
