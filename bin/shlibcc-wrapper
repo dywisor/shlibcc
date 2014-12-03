@@ -1,0 +1,6 @@
+#!/bin/bash
+f="$(readlink -f "$BASH_SOURCE")"
+: ${f:?}
+d="${f%/*}"; d="${d%/bin}";
+PYTHONPATH="${d}/pymod${PYTHONPATH:+:}${PYTHONPATH-}"
+exec "${d}/bin/shlibcc" "${@}"

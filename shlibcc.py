@@ -1,1 +1,1 @@
-bin/shlibcc
+bin/shlibcc-wrapper
