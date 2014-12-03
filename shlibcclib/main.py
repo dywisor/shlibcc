@@ -652,7 +652,8 @@ class ShlibccConfig ( object ):
 
          modules, blockers = shlibcclib.deputil.read_depfiles (
             depfiles,
-            shlibcclib.deputil.get_relpath_resolver ( self.shlib_dir )
+            None
+            #shlibcclib.deputil.get_relpath_resolver ( self.shlib_dir )
          )
 
          blocker_action = self._argv_config.depfile_blocker_strategy
