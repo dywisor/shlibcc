@@ -4,7 +4,7 @@
 
 EAPI=5
 
-PYTHON_COMPAT=( python{2_7,3_2,3_3} )
+PYTHON_COMPAT=( python{2_7,3_3,3_4} )
 EGIT_REPO_URI="git://git.erdmann.es/dywi/${PN}.git"
 
 inherit distutils-r1 git-r3
@@ -19,9 +19,7 @@ IUSE="tools"
 KEYWORDS=""
 
 DEPEND=""
-RDEPEND="${DEPEND-}
-	virtual/python-argparse
-"
+RDEPEND=""
 
 python_install_all() {
 	distutils-r1_python_install_all
