@@ -529,17 +529,20 @@ class ShlibFile ( object ):
             if newline_end: yield EMPTY_STR
       # --- end of iterate_str_lines (...) ---
 
+      prev_line_empty = True
+
       for s in iterate_str_lines ( self.pre_header ):
          yield s
+         prev_line_empty = not bool(s)
 
       for s in iterate_str_lines ( self.header, newline_end=False ):
          yield s
-
+         prev_line_empty = not bool(s)
 
       if self.defsym:
          yield self.defsym
+         prev_line_empty = not bool(s)
 
-      first_section    = True
       enclose_modules  = self.config.enclose_modules
       enclose_sections = self.config.enclose_sections
 
@@ -563,19 +566,19 @@ class ShlibFile ( object ):
                m_name = "<" + os.path.basename ( m.name ) + ">"
 
             if _str:
-               if section_empty:
-                  if first_section:
-                     first_section = False
-                  else:
-                     yield EMPTY_STR
+               if not prev_line_empty:
+                  yield EMPTY_STR
+                  prev_line_empty = True
 
+               if section_empty:
                   if enclose_sections and section != 'default':
                      yield "##### begin section {} #####".format ( section )
+                     yield EMPTY_STR
+                     prev_line_empty = True
 
                   section_empty = False
+               # -- end if first in file, first in section?
 
-
-               yield EMPTY_STR
                if section == 'default':
                   if enclose_modules:
                      yield "### begin module {} ###".format ( m_name )
@@ -586,27 +589,35 @@ class ShlibFile ( object ):
                   else:
                      yield _str
 
+                  prev_line_empty = False
+
                elif section == 'license':
                   yield "### license for " + m_name
                   yield _str
+                  prev_line_empty = False
 
                else:
-                  yield "### module " + m_name
-                  if _str[0] == '#':
+                  if enclose_modules:
+                     yield "### module " + m_name
+                     prev_line_empty = False
+                  if not prev_line_empty and _str[0] == '#':
                      yield EMPTY_STR
                   yield _str
+                  prev_line_empty = False
 
 
          if not section_empty:
-            #yield EMPTY_STR
             if enclose_sections and section != 'default':
-               yield EMPTY_STR
+               if not prev_line_empty:
+                  yield EMPTY_STR
                yield "##### end section {} #####".format ( section )
+               prev_line_empty = False
 
       # -- for;
 
       for s in iterate_str_lines ( self.footer, True, True ):
          yield s
+         prev_line_empty = not bool(s)
    # --- end of generate_lines (...) ---
 
    def __str__ ( self ):
