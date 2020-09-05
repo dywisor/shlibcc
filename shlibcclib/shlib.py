@@ -161,6 +161,7 @@ class ShlibModule ( object ):
       'user_vars'          : 'user_variables',
       'const'              : 'constants',
       'vars'               : 'variables',
+      'functions_private'  : 'functions',
       'func'               : 'functions',
       'functions_export'   : 'functions',
       'funcvars'           : 'module_init_vars',
